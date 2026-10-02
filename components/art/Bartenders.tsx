@@ -510,54 +510,221 @@ export function Jasper({ polishing = false, portrait = false, layer = "all" }: {
   );
 }
 
-/** The back bar behind the bartenders: brass shelves of backlit bottles. */
-export function BackBar() {
-  const bottles = [
-    // x, width, height, colour
-    [8, 16, 46, "#7a3e0c"], [28, 12, 56, "#1d5a3a"], [44, 18, 40, "#6d1f2a"], [66, 14, 52, "#c8a24a"],
-    [84, 20, 44, "#2a3f6a"], [108, 12, 58, "#7a3e0c"], [124, 16, 48, "#3c6e2f"], [144, 14, 54, "#8b2e5a"],
-    [162, 18, 42, "#c8771f"], [184, 12, 50, "#1d5a3a"],
-  ] as const;
+// ---- The back bar ------------------------------------------------------------
+
+/** The wall reaches this far above the bartenders' frame, in the same units. */
+export const WALL_TOP = -420;
+
+type Rng = () => number;
+function mulberry(seed: number): Rng {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const choose = <T,>(r: Rng, xs: readonly T[]) => xs[Math.floor(r() * xs.length)];
+
+/**
+ * Real bottles at real size. The frame is about 3.3 units per cm (Mabel's
+ * head is ~23 cm), and the back wall sits a step behind them, so everything
+ * on it is drawn at 85%. [height cm, width cm, neck cm, shoulder style]
+ */
+const BOTTLES = {
+  fifth: [30, 8, 9, "round"], // the everyday 750 ml
+  litre: [33, 8.5, 10, "round"],
+  square: [27, 9, 6, "square"], // Tennessee-style whiskey
+  wine: [31, 7.5, 11, "slope"], // vermouth, aperitifs
+  slim: [34, 6.5, 12, "slope"], // cordials, absinthe
+  flask: [20, 9.5, 5, "square"], // squat liqueur flask
+  half: [22, 6.5, 7, "round"], // 375 ml
+  bitters: [13, 5, 4, "round"], // bitters with a paper label
+  decanter: [24, 11, 4, "decanter"], // cut-glass with a ball stopper
+} as const;
+type Kind = keyof typeof BOTTLES;
+const KINDS = Object.keys(BOTTLES) as Kind[];
+const WEIGHTS: Record<Kind, number> = { fifth: 6, litre: 2, square: 3, wine: 3, slim: 2, flask: 2, half: 2, bitters: 2, decanter: 1 };
+
+/** Glass colour, and what's inside it. */
+const GLASS: { glass: string; alpha: number; liquid: string | null }[] = [
+  { glass: "#8a4a12", alpha: 0.9, liquid: "#b8661a" }, // bourbon in amber
+  { glass: "#c9d6d9", alpha: 0.32, liquid: "#c27a26" }, // whiskey, clear glass
+  { glass: "#c9d6d9", alpha: 0.32, liquid: null }, // gin, vodka
+  { glass: "#c9d6d9", alpha: 0.32, liquid: "#c41e3a" }, // bitter red aperitivo
+  { glass: "#c9d6d9", alpha: 0.32, liquid: "#b7c43a" }, // chartreuse
+  { glass: "#1f5b37", alpha: 0.88, liquid: "#3a5a1c" }, // green glass
+  { glass: "#0f3a26", alpha: 0.92, liquid: null },
+  { glass: "#1d3f8f", alpha: 0.85, liquid: null }, // cobalt gin
+  { glass: "#7d1328", alpha: 0.85, liquid: null }, // ruby
+  { glass: "#4a3b30", alpha: 0.9, liquid: "#6b3510" }, // dark rum
+  { glass: "#c9d6d9", alpha: 0.3, liquid: "#7a5ab3" }, // crème de violette
+  { glass: "#c9d6d9", alpha: 0.3, liquid: "#2f7fd8" }, // blue curaçao
+  { glass: "#c9d6d9", alpha: 0.3, liquid: "#5fae4c" }, // absinthe
+  { glass: "#e9e2d0", alpha: 0.95, liquid: null }, // milk glass
+  { glass: "#5b2e0e", alpha: 0.92, liquid: null }, // amaro
+];
+const LABELS = ["#efe3c6", "#f5f1e8", "#121212", "#a3202c", "#d4af37", "#1c4d4d", "#e8d9b0", "#2a1a3e"];
+const CAPS = ["#d4af37", "#b8902f", "#7a0f1c", "#1a1a1a", "#c9b38a", "#8c8c8c"];
+
+function pickKind(r: Rng): Kind {
+  const total = KINDS.reduce((a, k) => a + WEIGHTS[k], 0);
+  let n = r() * total;
+  for (const k of KINDS) if ((n -= WEIGHTS[k]) < 0) return k;
+  return "fifth";
+}
+
+function Bottle({ x, y, kind, seed }: { x: number; y: number; kind: Kind; seed: number }) {
+  // Each bottle rolls its own dice so a re-render can never reshuffle the bar.
+  const r = mulberry(seed);
+  const U = 3.3 * 0.85;
+  const [hc, wc, nc, shoulder] = BOTTLES[kind];
+  const h = hc * U * (0.94 + r() * 0.12);
+  const w = wc * U * (0.94 + r() * 0.12);
+  const neck = nc * U;
+  const nw = kind === "decanter" ? w * 0.28 : Math.max(2.4 * U, w * (kind === "flask" ? 0.3 : 0.32));
+  const g = choose(r, kind === "decanter" ? GLASS.filter((c) => c.alpha < 0.5) : GLASS);
+  const x0 = x;
+  const x1 = x + w;
+  const cx = x + w / 2;
+  const top = y - h;
+  const sh = shoulder === "square" ? 3 : shoulder === "slope" ? h * 0.22 : shoulder === "decanter" ? w * 0.42 : h * 0.12;
+  const yn = top + neck; // neck base
+  const ys = yn + sh; // shoulder start
+  const n0 = cx - nw / 2;
+  const n1 = cx + nw / 2;
+  const body =
+    shoulder === "decanter"
+      ? `M${x0 + 2},${y} C${x0 - 2},${y - h * 0.3} ${x0},${ys} ${n0},${yn} L${n0},${top + 4} L${n1},${top + 4} L${n1},${yn} C${x1},${ys} ${x1 + 2},${y - h * 0.3} ${x1 - 2},${y} Z`
+      : `M${x0},${y - 1.5} L${x0},${ys} C${x0},${ys - sh * 0.7} ${n0},${yn + sh * 0.35} ${n0},${yn} L${n0},${top} L${n1},${top} L${n1},${yn} C${n1},${yn + sh * 0.35} ${x1},${ys - sh * 0.7} ${x1},${ys} L${x1},${y - 1.5} Q${x1},${y} ${x1 - 1.5},${y} L${x0 + 1.5},${y} Q${x0},${y} ${x0},${y - 1.5} Z`;
+  const level = ys + (y - ys) * (0.05 + r() * 0.75);
+  const labelKind = r();
+  const lc = choose(r, LABELS);
+  const capC = choose(r, CAPS);
+  const lh = (y - ys) * (0.35 + r() * 0.25);
+  const ly = ys + (y - ys) * (0.3 + r() * 0.15);
   return (
-    <svg viewBox="0 0 200 150" preserveAspectRatio="xMidYMax slice" className="h-full w-full" aria-hidden>
+    <g>
+      <path d={body} fill={g.glass} fillOpacity={g.alpha} stroke="#000" strokeOpacity={0.35} strokeWidth={0.6} />
+      {g.liquid && <rect x={x0 + 1.2} y={level} width={w - 2.4} height={y - level - 1.2} fill={g.liquid} opacity={0.85} />}
+      {/* label: a plain band, an oval, or a tall paper label */}
+      {kind === "decanter" ? (
+        <path d={`M${cx - 6},${y - h * 0.35} l6,-5 l6,5 l-6,5 Z`} fill="#d4af37" opacity={0.8} />
+      ) : labelKind < 0.45 ? (
+        <rect x={x0 + 1.5} y={ly} width={w - 3} height={lh} rx={1} fill={lc} opacity={0.92} />
+      ) : labelKind < 0.75 ? (
+        <ellipse cx={cx} cy={ly + lh / 2} rx={w / 2 - 2} ry={lh / 2} fill={lc} opacity={0.92} />
+      ) : (
+        <>
+          <rect x={x0 + 2} y={ly} width={w - 4} height={lh * 0.6} fill={lc} opacity={0.9} />
+          <rect x={n0 - 0.5} y={yn + 1} width={nw + 1} height={3} fill={choose(r, LABELS)} opacity={0.9} />
+        </>
+      )}
+      {labelKind < 0.75 && kind !== "decanter" && <line x1={x0 + 3} x2={x1 - 3} y1={ly + lh * 0.45} y2={ly + lh * 0.45} stroke={lc === "#121212" ? "#d4af37" : "#6b5a40"} strokeWidth={0.8} opacity={0.7} />}
+      {/* cap, cork, wax or stopper */}
+      {kind === "decanter" ? (
+        <circle cx={cx} cy={top + 1} r={nw * 0.75} fill="#c9d6d9" fillOpacity={0.45} stroke="#000" strokeOpacity={0.3} strokeWidth={0.5} />
+      ) : capC === "#7a0f1c" ? (
+        <path d={`M${n0 - 0.6},${top + 5} L${n0 - 0.6},${top - 1} L${n1 + 0.6},${top - 1} L${n1 + 0.6},${top + 5} q-1,4 -2,0 q-1.5,3 -3,0 Z`} fill={capC} />
+      ) : (
+        <rect x={n0 - 0.5} y={top - 2} width={nw + 1} height={Math.min(neck * 0.45, 9)} rx={1} fill={capC} />
+      )}
+      {/* the shine down one side */}
+      <rect x={x0 + w * 0.16} y={ys + 2} width={Math.max(1.2, w * 0.08)} height={(y - ys) * 0.75} fill="#fff" opacity={0.22} rx={0.6} />
+    </g>
+  );
+}
+
+/** A little champagne tower of coupes, waiting their turn. */
+function Coupes({ x, y }: { x: number; y: number }) {
+  const U = 3.3 * 0.85;
+  const bw = 11 * U; // bowl across
+  const gh = 13 * U; // foot to rim
+  const glass = (gx: number, gy: number, k: string) => {
+    const rim = gy - gh;
+    return (
+      <g key={k} stroke="#e8f0f5" strokeOpacity={0.6} strokeWidth={0.9}>
+        <path d={`M${gx - bw / 2},${rim} C${gx - bw / 2},${rim + gh * 0.42} ${gx + bw / 2},${rim + gh * 0.42} ${gx + bw / 2},${rim} Z`} fill="#e8f0f5" fillOpacity={0.12} />
+        <line x1={gx} y1={rim + gh * 0.31} x2={gx} y2={gy} />
+        <path d={`M${gx - bw * 0.28},${gy} Q${gx},${gy - 2} ${gx + bw * 0.28},${gy}`} fill="none" />
+      </g>
+    );
+  };
+  return (
+    <g>
+      {[0, 1, 2].map((i) => glass(x + i * bw * 1.02, y, `a${i}`))}
+      {[0, 1].map((i) => glass(x + bw * 0.51 + i * bw * 1.02, y - gh, `b${i}`))}
+      {glass(x + bw * 1.02, y - gh * 2, "c")}
+    </g>
+  );
+}
+
+/**
+ * The back bar, in the bartenders' own units so the bottles are bottle-sized
+ * next to them: mirrored Deco panels, three lit glass shelves, and a jumble
+ * of real shapes, colours and fill levels. Seeded, so it's the same bar on
+ * every phone.
+ */
+export function BackBar() {
+  const r = mulberry(1920);
+  const shelves = [150, 10, -130];
+  const panels = Array.from({ length: 10 }, (_, i) => -500 + i * 120);
+  return (
+    <svg viewBox={`-500 ${WALL_TOP} 1200 ${VIEW_H - WALL_TOP}`} preserveAspectRatio="xMidYMax slice" className="h-full w-full" aria-hidden>
       <defs>
-        <radialGradient id="bb-glow" cx="0.5" cy="0.35" r="0.7">
-          <stop offset="0" stopColor="#ffb547" stopOpacity="0.35" />
-          <stop offset="1" stopColor="#ffb547" stopOpacity="0" />
-        </radialGradient>
+        <linearGradient id="bb-wall" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#0d0907" />
+          <stop offset="1" stopColor="#1c130c" />
+        </linearGradient>
+        <linearGradient id="bb-mirror" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#2a2119" />
+          <stop offset="0.5" stopColor="#1a140f" />
+          <stop offset="1" stopColor="#261d15" />
+        </linearGradient>
         <linearGradient id="bb-brass" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#f3d77a" />
           <stop offset="1" stopColor="#7a5a17" />
         </linearGradient>
+        <linearGradient id="bb-light" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#ffb547" stopOpacity="0.32" />
+          <stop offset="1" stopColor="#ffb547" stopOpacity="0" />
+        </linearGradient>
       </defs>
-      <rect width="200" height="150" fill="#120d09" />
-      {/* deco mirror panels */}
-      {[0, 50, 100, 150].map((x) => (
+      <rect x={-500} y={WALL_TOP} width={1200} height={VIEW_H - WALL_TOP} fill="url(#bb-wall)" />
+      {/* arched mirror panels with a sunburst crown */}
+      {panels.map((x) => (
         <g key={x}>
-          <rect x={x + 3} y={4} width={44} height={140} fill="#1a130d" stroke="#d4af37" strokeOpacity={0.35} strokeWidth={0.8} />
-          <path d={`M${x + 25},4 L${x + 25},30 M${x + 3},30 L${x + 47},30`} stroke="#d4af37" strokeOpacity={0.25} strokeWidth={0.6} />
-          {[0, 1, 2, 3, 4].map((i) => (
-            <line key={i} x1={x + 25} y1={30} x2={x + 5 + i * 10} y2={6} stroke="#d4af37" strokeOpacity={0.18} strokeWidth={0.5} />
+          <path d={`M${x + 8},${VIEW_H} L${x + 8},${WALL_TOP + 110} Q${x + 60},${WALL_TOP + 40} ${x + 112},${WALL_TOP + 110} L${x + 112},${VIEW_H} Z`} fill="url(#bb-mirror)" stroke="#d4af37" strokeOpacity={0.35} strokeWidth={1.2} />
+          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+            <line key={i} x1={x + 60} y1={WALL_TOP + 112} x2={x + 14 + i * 15.3} y2={WALL_TOP + 76 + Math.abs(i - 3) * 9} stroke="#d4af37" strokeOpacity={0.18} strokeWidth={0.8} />
           ))}
         </g>
       ))}
-      <rect width="200" height="150" fill="url(#bb-glow)" />
-      {[70, 130].map((shelfY, s) => (
-        <g key={shelfY}>
-          {bottles.map(([x, w, h, color], i) => {
-            const hh = h * (s ? 0.85 : 0.7);
-            return (
-              <g key={i} opacity={0.92}>
-                <rect x={x + ((i * 7 + s * 11) % 5)} y={shelfY - hh} width={w} height={hh} rx={3} fill={color} />
-                <rect x={x + ((i * 7 + s * 11) % 5) + w / 2 - 2.5} y={shelfY - hh - 10} width={5} height={12} rx={1.5} fill={color} />
-                <rect x={x + ((i * 7 + s * 11) % 5) + 2} y={shelfY - hh * 0.6} width={w - 4} height={hh * 0.28} fill="#f4ead5" opacity={0.75} />
-                <rect x={x + ((i * 7 + s * 11) % 5) + 2} y={shelfY - hh + 3} width={2.5} height={hh - 6} fill="#fff" opacity={0.18} />
-              </g>
-            );
-          })}
-          <rect x={0} y={shelfY} width={200} height={3} fill="url(#bb-brass)" />
-        </g>
-      ))}
+      {shelves.map((sy, s) => {
+        const items: React.ReactNode[] = [];
+        let x = -500 + r() * 10;
+        let k = 0;
+        while (x < 700) {
+          if (s === 0 && r() < 0.06) {
+            items.push(<Coupes key={k++} x={x + 16} y={sy} />);
+            x += 110;
+            continue;
+          }
+          const kind = pickKind(r);
+          const w = BOTTLES[kind][1] * 3.3 * 0.85;
+          items.push(<Bottle key={k} x={x} y={sy} kind={kind} seed={s * 1000 + k} />);
+          k++;
+          x += w + 2 + r() * (r() < 0.15 ? 30 : 9);
+        }
+        return (
+          <g key={sy}>
+            <rect x={-500} y={sy - 110} width={1200} height={110} fill="url(#bb-light)" />
+            {items}
+            <rect x={-500} y={sy} width={1200} height={3.5} fill="url(#bb-brass)" />
+            <rect x={-500} y={sy + 3.5} width={1200} height={6} fill="#000" opacity={0.35} />
+          </g>
+        );
+      })}
     </svg>
   );
 }

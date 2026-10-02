@@ -9,7 +9,7 @@ import { playSound } from "@/lib/sounds";
 import { enableTilt, tiltEnabled, tiltNeedsPermission, useShake } from "@/lib/tilt";
 import type { LiveEvent, Member } from "@/lib/types";
 import { showScene, useApp } from "../AppContext";
-import { BackBar, BAR_Y, Jasper, Mabel, VIEW_H, type Layer } from "../art/Bartenders";
+import { BackBar, BAR_Y, Jasper, Mabel, VIEW_H, WALL_TOP, type Layer } from "../art/Bartenders";
 import { ChalkboardSheet } from "../Chalkboard";
 import { PrepSheet } from "../Drink";
 import { PassNapkin, SeatingSheet } from "../Seating";
@@ -53,10 +53,6 @@ export function BartenderScene() {
         onClick={() => me && setCompact((c) => !c)}
         className={`relative overflow-hidden transition-[height] duration-500 ${compact && me ? "h-[310px]" : "h-[50dvh] min-h-[340px]"}`}
       >
-        <div className="absolute inset-0">
-          <BackBar />
-        </div>
-        <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_70%,rgba(255,181,71,0.2),transparent_70%)]" />
         {/* The top 170px is kept for the speech bubble, so it never covers a face. */}
         <BehindTheBar speaker={speaker} className="h-[calc(100%-170px)]" />
         {/* speech bubble */}
@@ -118,6 +114,11 @@ function BehindTheBar({ speaker, className }: { speaker: "mabel" | "jasper"; cla
   );
   return (
     <div className={`absolute inset-x-0 bottom-[30px] transition-[height] duration-500 ${className}`}>
+      {/* the back wall, in the same units as the two of them, so a bottle is bottle-sized */}
+      <div className="absolute inset-x-0 bottom-0 blur-[0.4px]" style={{ height: `${((VIEW_H - WALL_TOP) / VIEW_H) * 100}%` }}>
+        <BackBar />
+        <div className="absolute inset-0 bg-[radial-gradient(55%_40%_at_50%_75%,rgba(255,181,71,0.16),transparent_70%),linear-gradient(rgba(0,0,0,0.35),transparent_45%)]" />
+      </div>
       {row("body")}
       {/* the counter: polished top, brass edge, panelled front */}
       <div className="absolute inset-x-0 bottom-[-400px] z-[3]" style={{ top: `${(BAR_Y / VIEW_H) * 100}%` }}>
