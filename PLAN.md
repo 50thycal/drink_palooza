@@ -28,6 +28,7 @@ Built on the same foundation as [MovieTime](https://github.com/50thycal/movietim
 | 13 | **Scoring is pouring.** One glass per category; empty glass = 1, full glass = 10. Hold to pour, swipe up/down to adjust, tap Next to move on (no auto-advance) | ✅ decided |
 | 14 | **Presenter soundboard** with 6 sounds: womp womp, rimshot, applause, rap air horn, drumroll, explosion. Optional real recordings in `public/sounds/` | ✅ decided |
 | 15 | **Hosting: Vercel**; everyone plays on their own phone (portrait, mobile-first) | ✅ decided |
+| 17 | **Seating map + flick-to-pass napkins** (private, direction from your real seat); **social chalkboard**; **the bar remembers** (rings, champion caps, overheard napkin, the tab) | ✅ built |
 | 16 | After the last presenter, a **"Last Call"** state lets everyone finish or adjust scores; then the host starts the reveal | ⚙️ default |
 
 ---

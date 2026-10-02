@@ -1,7 +1,21 @@
 import { db } from "@/lib/db";
-import { BadRequest, fail, ok, parseId } from "@/lib/http";
+import { BadRequest, fail, ok, parseId, parseText } from "@/lib/http";
 import { requireMemberId } from "@/lib/identity";
-import { advance, cancelEvent, finishEvent, joinEvent, leaveEvent, setSlide, shuffleOrder, startEvent, startReveal, takeHost } from "@/lib/server";
+import {
+  advance,
+  cancelEvent,
+  finishEvent,
+  joinEvent,
+  leaveEvent,
+  passNapkin,
+  readNapkin,
+  setSeating,
+  setSlide,
+  shuffleOrder,
+  startEvent,
+  startReveal,
+  takeHost,
+} from "@/lib/server";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +60,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         break;
       case "cancel":
         await cancelEvent(sql, id, me);
+        break;
+      case "seating": {
+        const shape = body.shape === "long" ? "long" : "round";
+        if (!Array.isArray(body.order)) throw new BadRequest("order must list everyone");
+        await setSeating(sql, id, me, shape, body.order.map((x) => parseId(x, "order")));
+        break;
+      }
+      case "pass":
+        return ok(await passNapkin(sql, id, me, parseId(body.to_id, "to_id"), parseText(body.text, "Napkin", 200)!), 201);
+      case "napkin-read":
+        await readNapkin(sql, parseId(body.napkin_id, "napkin_id"), me);
         break;
       default:
         throw new BadRequest("Unknown action", 404);

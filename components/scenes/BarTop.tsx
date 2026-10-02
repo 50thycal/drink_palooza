@@ -1,8 +1,19 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useState } from "react";
+import { useMemory } from "@/lib/api";
+import type { BarMemory, Member } from "@/lib/types";
 import { useApp } from "../AppContext";
+import { ChalkboardPreview, ChalkboardSheet } from "../Chalkboard";
 import { Avatar, Coaster, DecoDivider, Neon } from "../ui";
+
+/** A stable 0–1 number from an id, so the bar looks the same on every phone. */
+function hash(id: string, salt = 0) {
+  let h = 2166136261 ^ salt;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 10000) / 10000;
+}
 
 /**
  * Home. Looking straight down at a long mahogany bar; scroll along it.
@@ -10,6 +21,8 @@ import { Avatar, Coaster, DecoDivider, Neon } from "../ui";
  */
 export function BarTop() {
   const { me, live, home, memberById, go } = useApp();
+  const { data: memory } = useMemory();
+  const [chalk, setChalk] = useState(false);
   const presenter = memberById(live?.current?.member_id);
   const champ = home.last_complete?.champion;
 
@@ -61,12 +74,11 @@ export function BarTop() {
         </div>
       )}
 
-      {/* ring stains and clutter */}
+      {/* the bar remembers: every drink left a ring, every champion a cap */}
+      <Memories memory={memory} memberById={memberById} />
       <RingStain className="left-[58%] top-[22dvh]" />
-      <RingStain className="left-[8%] top-[78dvh]" size={110} />
-      <BottleCap className="left-[78%] top-[52dvh]" rotate={30} />
       <LimeWedge className="left-[10%] top-[108dvh]" />
-      <BottleCap className="left-[70%] top-[150dvh]" rotate={-40} />
+      {!memory?.caps.length && <BottleCap className="left-[78%] top-[52dvh]" rotate={30} />}
 
       <div className="relative mt-8 flex flex-col gap-10 px-6">
         <motion.div className="self-center" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
@@ -100,13 +112,104 @@ export function BarTop() {
           <Coaster title="Recipe Book" subtitle="Every drink, ever" icon="📖" style="oxblood" size={164} rotate={-7} onClick={() => go("book")} />
         </div>
 
-        <div className="flex justify-start pl-4">
+        <div className="mx-1 rotate-[-1.5deg]">
+          <ChalkboardPreview onOpen={() => setChalk(true)} />
+        </div>
+
+        <div className="flex items-start justify-between pl-4">
           <Coaster title="Settings" subtitle={me ? `You're ${me.name}` : ""} icon="⚙️" style="cream" size={140} rotate={9} onClick={() => go("settings")} />
+          {memory?.overheard && <Overheard o={memory.overheard} who={memberById(memory.overheard.member_id)} />}
         </div>
 
         <DecoDivider className="mx-8 mt-6 opacity-60" />
         <p className="text-center font-deco text-xs font-bold tracking-[0.3em] text-champagne/50">PLEASE DRINK RESPONSIBLY · TIP YOUR BARTENDERS</p>
       </div>
+      <ChalkboardSheet open={chalk} onClose={() => setChalk(false)} />
+    </div>
+  );
+}
+
+/**
+ * Ring stains (one per drink ever presented, tinted with its maker's colour)
+ * and champions' bottle caps, scattered the same way on every phone. They
+ * sit under everything and pile up palooza after palooza.
+ */
+function Memories({ memory, memberById }: { memory: BarMemory | undefined; memberById: (id: string) => Member | null }) {
+  if (!memory) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden>
+      {memory.rings.map((r) => {
+        const color = memberById(r.member_id)?.color ?? "#1e0a02";
+        const size = 64 + hash(r.id, 3) * 52;
+        return (
+          <div
+            key={r.id}
+            className="absolute rounded-full"
+            style={{
+              left: `${4 + hash(r.id, 1) * 78}%`,
+              top: `${12 + hash(r.id, 2) * 84}%`,
+              width: size,
+              height: size * (0.92 + hash(r.id, 4) * 0.12),
+              boxShadow: `inset 0 0 0 ${2 + hash(r.id, 5) * 2}px rgb(30 10 2 / 0.32), inset 0 0 0 7px ${color}14`,
+              rotate: `${hash(r.id, 6) * 180}deg`,
+            }}
+          />
+        );
+      })}
+      {memory.caps.map((c) => {
+        const who = memberById(c.member_id);
+        const initials = (who?.name ?? "?").slice(0, 2).toUpperCase();
+        const d = new Date(c.date);
+        return (
+          <ChampionCap
+            key={c.event_id}
+            initials={initials}
+            date={`${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`}
+            color={who?.color ?? "#6d1f2a"}
+            style={{ left: `${8 + hash(c.event_id, 7) * 76}%`, top: `${20 + hash(c.event_id, 8) * 72}%`, rotate: `${hash(c.event_id, 9) * 70 - 35}deg` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function ChampionCap({ initials, date, color, style }: { initials: string; date: string; color: string; style: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 48 48" className="absolute w-12 drop-shadow-[0_3px_3px_rgba(0,0,0,0.6)]" style={style}>
+      <path
+        d={
+          Array.from({ length: 23 }, (_, i) => {
+            const a = (i / 23) * Math.PI * 2;
+            const r = i % 2 ? 20.5 : 23.5;
+            return `${i ? "L" : "M"}${24 + Math.cos(a) * r},${24 + Math.sin(a) * r}`;
+          }).join(" ") + "Z"
+        }
+        fill="#d4af37"
+      />
+      <circle cx="24" cy="24" r="16" fill={color} stroke="#fff3c4" strokeWidth="1.2" />
+      <text x="24" y="25" textAnchor="middle" fontSize="12" fill="#fff8e0" fontFamily="Limelight, serif">
+        {initials}
+      </text>
+      <text x="24" y="34" textAnchor="middle" fontSize="6" fill="#fff8e0" fontFamily="Josefin Sans, sans-serif" fontWeight="700">
+        🏆 {date}
+      </text>
+    </svg>
+  );
+}
+
+/** One napkin from last time, left on the bar. */
+function Overheard({ o, who }: { o: NonNullable<BarMemory["overheard"]>; who: Member | null }) {
+  return (
+    <div
+      className="paper mt-6 w-40 rotate-[5deg] rounded-sm p-3 shadow-lg"
+      style={{ backgroundImage: "repeating-linear-gradient(45deg, rgb(43 29 18 / 0.035) 0 6px, transparent 6px 12px)" }}
+    >
+      <div className="font-deco text-[9px] font-bold tracking-widest opacity-70">OVERHEARD AT {o.event_name.toUpperCase()}</div>
+      <p className="chalk mt-1 text-xl leading-tight" style={{ textShadow: "none" }}>
+        &ldquo;{o.text}&rdquo;
+      </p>
+      <div className="mt-1 text-right font-deco text-[11px] font-bold opacity-70">— {who?.name ?? "someone"}</div>
     </div>
   );
 }

@@ -3,13 +3,15 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MEMBER_EMOJIS } from "@/lib/constants";
-import { eventAction, refreshAll, send } from "@/lib/api";
+import { eventAction, refreshAll, send, useMemory } from "@/lib/api";
 import { playSound } from "@/lib/sounds";
 import { enableTilt, tiltEnabled, tiltNeedsPermission, useShake } from "@/lib/tilt";
 import type { LiveEvent, Member } from "@/lib/types";
 import { showScene, useApp } from "../AppContext";
 import { BackBar, Jasper, Mabel } from "../art/Bartenders";
+import { ChalkboardSheet } from "../Chalkboard";
 import { PrepSheet } from "../Drink";
+import { PassNapkin, SeatingSheet } from "../Seating";
 import { Avatar, BackPlaque, DecoDivider, toast, useBusy } from "../ui";
 
 type Speaker = "mabel" | "jasper";
@@ -23,7 +25,8 @@ export function BartenderScene() {
   const app = useApp();
   const { me, live, back } = app;
   const [speaker] = useState<Speaker>(() => (Math.random() < 0.5 ? "mabel" : "jasper"));
-  const line = useLine(speaker);
+  const { data: memory } = useMemory();
+  const line = useLine(speaker, memory?.wins ?? {});
 
   return (
     <div className="relative min-h-full bg-onyx pb-16">
@@ -88,10 +91,18 @@ export function BartenderScene() {
 }
 
 /** What the bartender says, by state. */
-function useLine(speaker: Speaker) {
+function useLine(speaker: Speaker, wins: Record<string, number>) {
   return ({ me, live, joined, memberById }: ReturnType<typeof useApp>) => {
     const m = speaker === "mabel";
     if (!me) return m ? "Evening, darling! Who's drinking tonight?" : "Evening. Whose tab am I starting?";
+    // The bar remembers its champions.
+    const titles = wins[me.id] ?? 0;
+    if ((!live || live.event.status === "lobby") && titles >= 3)
+      return m ? `Well, if it isn't the legend! ${titles} titles, ${me.name}. The usual?` : `${me.name}. ${titles}-time champion. Your stool's been kept warm.`;
+    if (!live && titles > 0)
+      return m ? `Our champ! Throw another palooza and defend that crown, ${me.name}?` : `Evening, champion. The others want a rematch, ${me.name}.`;
+    if (live?.event.status === "lobby" && titles > 0 && joined)
+      return m ? `Our champ's back! Defending the crown tonight, ${me.name}?` : `The reigning champion returns. Don't get comfortable, ${me.name}.`;
     if (!live) return m ? `Quiet night, ${me.name}. Shall we throw a palooza?` : `Slow one tonight, ${me.name}. Fancy opening a palooza?`;
     const presenter = memberById(live.current?.member_id);
     switch (live.event.status) {
@@ -239,6 +250,9 @@ function EventMenu({ live }: { live: LiveEvent }) {
   const { event } = live;
   const { busy, run } = useBusy();
   const [prep, setPrep] = useState(false);
+  const [seating, setSeating] = useState(false);
+  const [passing, setPassing] = useState(false);
+  const [chalk, setChalk] = useState(false);
   const myDrink = live.drinks.find((d) => d.member_id === meId);
   const host = memberById(event.host_id);
   const target = showScene(live, meId);
@@ -304,6 +318,7 @@ function EventMenu({ live }: { live: LiveEvent }) {
             onClick={() =>
               run(async () => {
                 if (live.participants.length < 2) throw new Error("You need at least two bartenders");
+                if (!event.seating_set && confirm("Seat the table first, so napkins can be passed across it?")) return setSeating(true);
                 if (!confirm("Start the show? The order locks in.")) return;
                 await eventAction(event.id, "start");
                 playSound("airhorn");
@@ -336,6 +351,22 @@ function EventMenu({ live }: { live: LiveEvent }) {
         {!isHost && event.status === "lobby" && (
           <p className="pt-1 text-center font-deco text-sm font-bold italic opacity-70">{host?.name ?? "The host"} starts the show</p>
         )}
+
+        {joined && event.status !== "complete" && (
+          <>
+            <MenuButton onClick={() => setSeating(true)} price={event.seating_set ? "✓" : "🪑"}>
+              {event.seating_set ? "Change the seating" : "Seat the table"}
+            </MenuButton>
+            {live.participants.length > 1 && (
+              <MenuButton onClick={() => setPassing(true)} price="✉">
+                Pass a napkin
+              </MenuButton>
+            )}
+          </>
+        )}
+        <MenuButton onClick={() => setChalk(true)} price="🖍">
+          Write on the chalkboard
+        </MenuButton>
       </div>
 
       <DecoDivider ink className="my-5" />
@@ -350,6 +381,9 @@ function EventMenu({ live }: { live: LiveEvent }) {
         </button>
       )}
       {myDrink && <PrepSheet drinkId={myDrink.id} open={prep} onClose={() => setPrep(false)} />}
+      <SeatingSheet open={seating} onClose={() => setSeating(false)} />
+      <PassNapkin open={passing} onClose={() => setPassing(false)} />
+      <ChalkboardSheet open={chalk} onClose={() => setChalk(false)} />
     </div>
   );
 }

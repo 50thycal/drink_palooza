@@ -9,6 +9,8 @@ import { useApp } from "../AppContext";
 import { GlassIcon } from "../art/Glass";
 import { PhotoButton, PhotoStrip, RecipeCard } from "../Drink";
 import { PourRig } from "../PourRig";
+import { ChalkboardSheet } from "../Chalkboard";
+import { PassNapkin } from "../Seating";
 import { Avatar, BackPlaque, FloatingReactions, Neon, Sheet, toast } from "../ui";
 
 /**
@@ -45,6 +47,7 @@ export function PourScene() {
         <NotesButton drinkId={drink.id} initial={live.my_notes[drink.id] ?? ""} />
         <PhotoButton drinkId={drink.id} label="Photo" dark />
       </div>
+      <ChalkButton />
     </div>
   );
 }
@@ -206,6 +209,19 @@ function NextGlass({ index, scores, onGo }: { index: number; scores: ScoreMap; o
   );
 }
 
+/** The chalkboard, from anywhere in the game. */
+export function ChalkButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)} className="chalk mx-auto mt-3 block rounded-full border border-white/30 bg-[#1f2622] px-5 py-1.5 text-xl text-[#f2efe6]">
+        🖍 The chalkboard
+      </button>
+      <ChalkboardSheet open={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
 function WaitingOn({ ids }: { ids: string[] }) {
   const { memberById } = useApp();
   if (!ids.length) return <div className="mt-3 text-center font-deco text-xs font-bold tracking-widest text-neon-teal/80">EVERYONE HAS POURED</div>;
@@ -242,10 +258,12 @@ export function ReactionTray({ drinkId, onLocal }: { drinkId: string; onLocal: (
 
 /** Public comments, written on cocktail napkins. */
 export function Napkins({ drinkId, comments }: { drinkId: string; comments: Comment[] }) {
-  const { memberById, meId } = useApp();
+  const { memberById, meId, live, joined } = useApp();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [passing, setPassing] = useState(false);
   const recent = comments.slice(-6).reverse();
+  const canPass = joined && live && live.event.status !== "complete" && live.participants.length > 1;
   return (
     <div className="mx-3 mt-4">
       <form
@@ -270,13 +288,21 @@ export function Napkins({ drinkId, comments }: { drinkId: string; comments: Comm
           value={text}
           maxLength={200}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Scribble on a napkin…"
+          placeholder="A napkin for the whole table…"
           className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-ink/40"
         />
         <button disabled={busy || !text.trim()} className="font-display text-sm text-oxblood disabled:opacity-40">
-          Pass it
+          Post it
         </button>
       </form>
+      {canPass && (
+        <>
+          <button onClick={() => setPassing(true)} className="btn-ghost mt-2 w-full rounded-full bg-black/40 py-2 text-sm">
+            ✉ Pass a private napkin across the table
+          </button>
+          <PassNapkin open={passing} onClose={() => setPassing(false)} />
+        </>
+      )}
       <div className="mt-3 grid grid-cols-2 gap-2.5">
         <AnimatePresence initial={false}>
           {recent.map((c, i) => (

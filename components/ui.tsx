@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Member, Reaction } from "@/lib/types";
 import { useViewportInsets } from "@/lib/useViewport";
 
@@ -153,42 +154,69 @@ export function Coaster({
   );
 }
 
+// ---- Portal ----------------------------------------------------------------
+
+/**
+ * Overlays render at the top of the page, not inside the scene that opened
+ * them: scenes are animated (transformed) layers, which would otherwise trap
+ * a "fixed" overlay inside the scene and under its buttons.
+ */
+export function Portal({ children }: { children: React.ReactNode }) {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => setHost(document.body), []);
+  return host ? createPortal(children, host) : null;
+}
+
 // ---- Sheet -----------------------------------------------------------------
 
 /**
  * A menu-card sheet that slides up over a scene. Sized against the visible
  * viewport so its contents stay above the iOS keyboard.
  */
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title?: string; children: React.ReactNode }) {
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+  tone = "paper",
+}: {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+  children: React.ReactNode;
+  tone?: "paper" | "slate";
+}) {
   const { height, keyboard } = useViewportInsets();
   const maxH = height ? height - 24 : undefined;
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div className="fixed inset-0 z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-          <motion.div
-            role="dialog"
-            aria-label={title}
-            className="paper absolute inset-x-0 mx-auto flex max-w-lg flex-col rounded-t-2xl shadow-2xl"
-            style={{ bottom: keyboard, maxHeight: maxH ?? "88dvh" }}
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 320 }}
-          >
-            <div className="deco-frame-ink pointer-events-none absolute inset-2 rounded-t-xl" />
-            <div className="flex items-center justify-between px-5 pt-5 pb-2">
-              <h2 className="font-display text-xl tracking-wide">{title}</h2>
-              <button onClick={onClose} className="relative z-10 rounded-full px-3 py-1 font-deco text-sm font-bold" aria-label="Close">
-                ✕
-              </button>
-            </div>
-            <div className="relative overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
+    <Portal>
+      <AnimatePresence>
+        {open && (
+          <motion.div className="fixed inset-0 z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+            <motion.div
+              role="dialog"
+              aria-label={title}
+              className={`${tone === "slate" ? "slate border-t-[6px] border-[#6b4a2b]" : "paper"} absolute inset-x-0 mx-auto flex max-w-lg flex-col rounded-t-2xl shadow-2xl`}
+              style={{ bottom: keyboard, maxHeight: maxH ?? "88dvh" }}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+            >
+              {tone === "paper" && <div className="deco-frame-ink pointer-events-none absolute inset-2 rounded-t-xl" />}
+              <div className="flex items-center justify-between px-5 pt-5 pb-2">
+                <h2 className={tone === "slate" ? "chalk text-3xl font-bold" : "font-display text-xl tracking-wide"}>{title}</h2>
+                <button onClick={onClose} className="relative z-10 rounded-full px-3 py-1 font-deco text-sm font-bold" aria-label="Close">
+                  ✕
+                </button>
+              </div>
+              <div className="relative overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </Portal>
   );
 }
 

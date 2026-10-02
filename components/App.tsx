@@ -7,6 +7,7 @@ import { useMe } from "@/lib/me";
 import { useScene } from "@/lib/scene";
 import { Ctx, SHOW_SCENES, showScene, type AppCtx } from "./AppContext";
 import SceneStage from "./SceneStage";
+import { NapkinArrivals } from "./Seating";
 import { BarTop } from "./scenes/BarTop";
 import { BartenderScene } from "./scenes/Bartender";
 import { BookScene, DrinkScene } from "./scenes/Book";
@@ -147,6 +148,7 @@ export default function App() {
           </motion.button>
         )}
       </AnimatePresence>
+      {me && <NapkinArrivals />}
       <Toaster />
     </Ctx.Provider>
   );

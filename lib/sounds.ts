@@ -608,6 +608,27 @@ export function clink() {
   }
 }
 
+/** A napkin sliding across the bar. */
+export function paperSlide() {
+  if (isMuted()) return;
+  const b = getBus();
+  if (!b) return;
+  const { c } = b;
+  const out = strip(b, { gain: 0.35, send: 0.15 });
+  const t = c.currentTime + 0.01;
+  const src = noise(c);
+  const bp = filter(c, "bandpass", 2400, 0.9);
+  bp.frequency.setValueAtTime(3200, t);
+  bp.frequency.exponentialRampToValueAtTime(1300, t + 0.35);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.5, t + 0.06);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+  src.connect(bp).connect(g).connect(out);
+  src.start(t);
+  src.stop(t + 0.4);
+}
+
 /** A soft continuous pour while the bottle is tipped. Returns a stop function. */
 export function startPourSound(): () => void {
   if (isMuted()) return () => {};

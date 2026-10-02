@@ -8,7 +8,7 @@ import { playSound, preloadSounds } from "@/lib/sounds";
 import { useApp } from "../AppContext";
 import { PhotoButton, PrepSheet } from "../Drink";
 import { Avatar, BackPlaque, DecoDivider, FloatingReactions, Neon, Sunburst, toast, useBusy } from "../ui";
-import { Napkins, ReactionTray, RecipeSheet } from "./Pour";
+import { ChalkButton, Napkins, ReactionTray, RecipeSheet } from "./Pour";
 
 /**
  * The neon wall, as the presenter sees it. Your name in lights, your drink
@@ -162,6 +162,7 @@ export function StageScene() {
       )}
 
       {me && <Napkins drinkId={drink.id} comments={live.comments} />}
+      {me && <ChalkButton />}
       <RecipeSheet drinkId={drink.id} open={recipe} onClose={() => setRecipe(false)} />
     </div>
   );

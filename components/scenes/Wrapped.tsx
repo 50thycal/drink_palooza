@@ -118,7 +118,7 @@ function Intro({ results, name }: { results: EventResults; name: string }) {
       <div className="mt-4 grid grid-cols-2 gap-3">
         <Plaque value={t.drinks} label="cocktails" delay={0.6} />
         <Plaque value={t.scores} label="glasses poured" delay={0.9} />
-        <Plaque value={t.comments} label="napkins scribbled" delay={1.2} />
+        <Plaque value={t.comments + (t.passes ?? 0)} label="napkins scribbled" delay={1.2} />
         <Plaque value={t.reactions} label="reactions" delay={1.5} />
       </div>
       {t.top_emoji && (
@@ -190,7 +190,16 @@ function PodiumSlide({ podium, results }: { podium: Podium; results: EventResult
   );
 }
 
-const SUPERLATIVE_ICONS: Record<string, string> = { harshest: "🧐", generous: "🥰", divisive: "⚖️", crowd: "🔥", chatterbox: "🗣️", hype: "📣" };
+const SUPERLATIVE_ICONS: Record<string, string> = {
+  harshest: "🧐",
+  generous: "🥰",
+  divisive: "⚖️",
+  crowd: "🔥",
+  chatterbox: "🗣️",
+  hype: "📣",
+  postman: "📨",
+  penpals: "💌",
+};
 
 function Superlatives({ results }: { results: EventResults }) {
   const { memberById } = useApp();
@@ -209,8 +218,14 @@ function Superlatives({ results }: { results: EventResults }) {
                 <div className="truncate text-sm text-champagne/75">{s.detail}</div>
               </div>
               <div className="flex flex-col items-center">
-                <Avatar member={memberById(s.member_id)} size={34} />
-                <span className="font-deco text-xs font-bold text-champagne">{memberById(s.member_id)?.name}</span>
+                <div className="flex -space-x-2">
+                  <Avatar member={memberById(s.member_id)} size={34} />
+                  {s.partner_id && <Avatar member={memberById(s.partner_id)} size={34} />}
+                </div>
+                <span className="font-deco text-xs font-bold text-champagne">
+                  {memberById(s.member_id)?.name}
+                  {s.partner_id && ` & ${memberById(s.partner_id)?.name}`}
+                </span>
               </div>
             </div>
           </motion.div>
