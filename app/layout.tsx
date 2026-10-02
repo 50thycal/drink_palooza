@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=Limelight&family=Neonderthaw&family=Poiret+One&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Josefin+Sans:wght@400;600;700&family=Limelight&family=Neonderthaw&family=Poiret+One&display=swap"
         />
       </head>
       <body>{children}</body>

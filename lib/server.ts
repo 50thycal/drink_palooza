@@ -4,7 +4,10 @@ import type { Sql } from "./db";
 import { BadRequest, Conflict, Forbidden, NotFound } from "./http";
 import { eventResults, hallOfFame, shuffle, type DrinkInput } from "./scoring";
 import type {
+  BarMemory,
   CatalogEntry,
+  ChalkColor,
+  ChalkNote,
   Comment,
   Drink,
   DrinkDetail,
@@ -15,12 +18,14 @@ import type {
   Ingredient,
   LiveEvent,
   Member,
+  NapkinPass,
   PaloozaEvent,
   Participant,
   Photo,
   Reaction,
   Score,
   ScoreMap,
+  TableShape,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -71,7 +76,7 @@ async function getEvent(sql: Sql, id: string): Promise<PaloozaEvent> {
 }
 
 async function participants(sql: Sql, eventId: string): Promise<Participant[]> {
-  return (await sql`SELECT member_id, position, joined_at FROM event_participants WHERE event_id = ${eventId}
+  return (await sql`SELECT member_id, position, seat, joined_at FROM event_participants WHERE event_id = ${eventId}
     ORDER BY position NULLS LAST, joined_at`) as Participant[];
 }
 
@@ -97,10 +102,12 @@ export async function joinEvent(sql: Sql, eventId: string, me: string) {
   await requireMember(sql, me);
   const event = await getEvent(sql, eventId);
   if (event.status !== "lobby" && event.status !== "live") throw new Conflict("This palooza isn't taking new bartenders");
-  // Late arrivals go to the back of the line once the order is set.
-  await sql`INSERT INTO event_participants (event_id, member_id, position)
+  // Late arrivals go to the back of the line once the order is set, and take
+  // the next seat at the table (anyone can rearrange the seating later).
+  await sql`INSERT INTO event_participants (event_id, member_id, position, seat)
     VALUES (${eventId}, ${me}, CASE WHEN ${event.order_set} THEN
-      (SELECT COALESCE(max(position), 0) + 1 FROM event_participants WHERE event_id = ${eventId}) ELSE NULL END)
+      (SELECT COALESCE(max(position), 0) + 1 FROM event_participants WHERE event_id = ${eventId}) ELSE NULL END,
+      (SELECT count(*)::int FROM event_participants WHERE event_id = ${eventId}))
     ON CONFLICT DO NOTHING`;
   await sql`INSERT INTO drinks (event_id, member_id) VALUES (${eventId}, ${me}) ON CONFLICT DO NOTHING`;
 }
@@ -110,11 +117,47 @@ export async function leaveEvent(sql: Sql, eventId: string, me: string) {
   if (event.status !== "lobby") throw new Conflict("The show has started — you're in it now");
   await sql`DELETE FROM drinks WHERE event_id = ${eventId} AND member_id = ${me}`;
   await sql`DELETE FROM event_participants WHERE event_id = ${eventId} AND member_id = ${me}`;
+  await compactSeats(sql, eventId);
   if (event.host_id === me) {
     const next = await participants(sql, eventId);
     if (!next.length) await sql`DELETE FROM events WHERE id = ${eventId}`;
     else await sql`UPDATE events SET host_id = ${next[0].member_id} WHERE id = ${eventId}`;
   }
+}
+
+/** Close any gap someone leaving made, keeping everyone's relative order. */
+async function compactSeats(sql: Sql, eventId: string) {
+  const rows = (await sql`SELECT member_id FROM event_participants WHERE event_id = ${eventId} ORDER BY seat NULLS LAST, joined_at`) as { member_id: string }[];
+  for (const [i, r] of rows.entries()) await sql`UPDATE event_participants SET seat = ${i} WHERE event_id = ${eventId} AND member_id = ${r.member_id}`;
+}
+
+/** Save who sits where: `order` lists everyone, seat 0 first, round the table. */
+export async function setSeating(sql: Sql, eventId: string, me: string, shape: TableShape, order: string[]) {
+  const event = await getEvent(sql, eventId);
+  if (event.status === "complete") throw new Conflict("That palooza is over");
+  await requireParticipant(sql, eventId, me);
+  const people = (await participants(sql, eventId)).map((p) => p.member_id);
+  if (order.length !== people.length || new Set(order).size !== order.length || !order.every((id) => people.includes(id))) {
+    throw new Conflict("Seating changed while you were arranging it — try again");
+  }
+  for (const [i, id] of order.entries()) await sql`UPDATE event_participants SET seat = ${i} WHERE event_id = ${eventId} AND member_id = ${id}`;
+  await sql`UPDATE events SET table_shape = ${shape}, seating_set = true WHERE id = ${eventId}`;
+}
+
+/** Pass a napkin across the table: private between the two of you. */
+export async function passNapkin(sql: Sql, eventId: string, me: string, to: string, text: string): Promise<NapkinPass> {
+  const event = await getEvent(sql, eventId);
+  if (event.status === "complete") throw new Conflict("That palooza is over");
+  if (to === me) throw new BadRequest("Passing a napkin to yourself? Bold.");
+  await requireParticipant(sql, eventId, me);
+  const there = await sql`SELECT 1 FROM event_participants WHERE event_id = ${eventId} AND member_id = ${to}`;
+  if (!there.length) throw new BadRequest("They're not at this table");
+  const rows = await sql`INSERT INTO napkin_passes (event_id, from_id, to_id, text) VALUES (${eventId}, ${me}, ${to}, ${text}) RETURNING *`;
+  return rows[0] as NapkinPass;
+}
+
+export async function readNapkin(sql: Sql, napkinId: string, me: string) {
+  await sql`UPDATE napkin_passes SET read_at = now() WHERE id = ${napkinId} AND to_id = ${me} AND read_at IS NULL`;
 }
 
 export async function shuffleOrder(sql: Sql, eventId: string, me: string, random: () => number = () => randomInt(0, 2 ** 32) / 2 ** 32) {
@@ -378,12 +421,13 @@ export async function react(sql: Sql, drinkId: string, me: string, emoji: string
 
 async function resultsFor(sql: Sql, eventId: string): Promise<EventResults> {
   const drinks = (await sql.query(`SELECT d.id, d.member_id, d.name, ${HERO_URL} AS hero_url FROM drinks d WHERE d.event_id = $1`, [eventId])) as DrinkInput[];
-  const [scores, comments, reactions] = await Promise.all([
+  const [scores, comments, reactions, passes] = await Promise.all([
     sql`SELECT s.* FROM scores s JOIN drinks d ON d.id = s.drink_id WHERE d.event_id = ${eventId}`,
     sql`SELECT c.* FROM comments c JOIN drinks d ON d.id = c.drink_id WHERE d.event_id = ${eventId}`,
     sql`SELECT r.* FROM reactions r JOIN drinks d ON d.id = r.drink_id WHERE d.event_id = ${eventId}`,
+    sql`SELECT from_id, to_id FROM napkin_passes WHERE event_id = ${eventId}`,
   ]);
-  return eventResults(drinks, scores as Score[], comments as Comment[], reactions as Reaction[]);
+  return eventResults(drinks, scores as Score[], comments as Comment[], reactions as Reaction[], passes as { from_id: string; to_id: string }[]);
 }
 
 const revealed = (status: string) => status === "wrapped" || status === "complete";
@@ -415,10 +459,13 @@ export async function loadLive(sql: Sql, event: PaloozaEvent, me: string | null)
     for (const n of notes) my_notes[n.drink_id] = n.text;
   }
 
-  const [comments, reactions] = await Promise.all([
+  const [comments, reactions, napkins] = await Promise.all([
     current ? sql`SELECT * FROM comments WHERE drink_id = ${current.id} ORDER BY created_at DESC LIMIT 40` : Promise.resolve([]),
     sql`SELECT r.* FROM reactions r JOIN drinks d ON d.id = r.drink_id WHERE d.event_id = ${event.id}
       AND r.created_at > now() - make_interval(secs => ${REACTION_WINDOW_SEC}) ORDER BY r.created_at`,
+    me
+      ? sql`SELECT * FROM napkin_passes WHERE event_id = ${event.id} AND (to_id = ${me} OR from_id = ${me}) ORDER BY created_at DESC LIMIT 40`
+      : Promise.resolve([]),
   ]);
 
   return {
@@ -432,6 +479,7 @@ export async function loadLive(sql: Sql, event: PaloozaEvent, me: string | null)
     scored_counts,
     comments: (comments as Comment[]).reverse(),
     reactions: reactions as Reaction[],
+    napkins: napkins as NapkinPass[],
     results: revealed(event.status) ? await resultsFor(sql, event.id) : null,
   };
 }
@@ -505,4 +553,66 @@ export async function loadHallOfFame(sql: Sql): Promise<HallOfFame> {
   const events = (await sql`SELECT id, name, completed_at FROM events WHERE status = 'complete'`) as { id: string; name: string; completed_at: string }[];
   const withResults = await Promise.all(events.map(async (e) => ({ ...e, results: await resultsFor(sql, e.id) })));
   return hallOfFame(withResults);
+}
+
+// ---------------------------------------------------------------------------
+// The chalkboard
+// ---------------------------------------------------------------------------
+
+export async function listChalk(sql: Sql): Promise<ChalkNote[]> {
+  return (await sql`SELECT * FROM chalk_notes ORDER BY created_at DESC LIMIT 60`) as ChalkNote[];
+}
+
+export async function addChalk(sql: Sql, me: string, text: string, color: ChalkColor): Promise<ChalkNote> {
+  await requireMember(sql, me);
+  const open = await openEvent(sql);
+  const rows = await sql`INSERT INTO chalk_notes (member_id, text, color, event_id) VALUES (${me}, ${text}, ${color}, ${open?.id ?? null}) RETURNING *`;
+  return rows[0] as ChalkNote;
+}
+
+export async function eraseChalk(sql: Sql, id: string, me: string) {
+  const rows = await sql`DELETE FROM chalk_notes WHERE id = ${id} AND member_id = ${me} RETURNING id`;
+  if (!rows.length) throw new Forbidden("Only whoever wrote it can wipe it off");
+}
+
+// ---------------------------------------------------------------------------
+// What the bar remembers
+// ---------------------------------------------------------------------------
+
+/**
+ * Everything the bar top accumulates over the years: a ring stain for every
+ * drink ever presented, a bottle cap for every champion, one napkin
+ * overheard at the last palooza, and the running tab.
+ */
+export async function loadMemory(sql: Sql): Promise<BarMemory> {
+  const [rings, done, tallies] = await Promise.all([
+    sql`SELECT d.id, d.member_id, d.event_id FROM drinks d JOIN events e ON e.id = d.event_id
+      WHERE e.status = 'complete' AND d.status = 'done' ORDER BY e.completed_at, d.started_at LIMIT 160`,
+    sql`SELECT id, name, completed_at FROM events WHERE status = 'complete' ORDER BY completed_at DESC`,
+    sql`SELECT
+      (SELECT count(*)::int FROM events WHERE status = 'complete') AS paloozas,
+      (SELECT count(*)::int FROM drinks d JOIN events e ON e.id = d.event_id WHERE e.status = 'complete' AND d.status = 'done') AS drinks,
+      (SELECT count(*)::int FROM scores) AS pours,
+      ((SELECT count(*)::int FROM comments) + (SELECT count(*)::int FROM napkin_passes)) AS napkins,
+      (SELECT count(*)::int FROM photos) AS photos,
+      (SELECT count(*)::int FROM chalk_notes) AS chalk`,
+  ]);
+  const hall = await loadHallOfFame(sql);
+  const wins: Record<string, number> = {};
+  for (const t of hall.titles) wins[t.member_id] = t.wins;
+  let overheard: BarMemory["overheard"] = null;
+  const last = done[0] as { id: string; name: string } | undefined;
+  if (last) {
+    // One napkin from last time, picked the same way on every phone.
+    const c = await sql`SELECT c.text, c.member_id FROM comments c JOIN drinks d ON d.id = c.drink_id
+      WHERE d.event_id = ${last.id} ORDER BY length(c.text) DESC, c.created_at LIMIT 1`;
+    if (c.length) overheard = { text: c[0].text, member_id: c[0].member_id, event_name: last.name };
+  }
+  return {
+    rings: rings as BarMemory["rings"],
+    caps: hall.champions.map((c) => ({ event_id: c.event_id, event_name: c.event_name, member_id: c.member_id, date: c.date })).reverse(),
+    overheard,
+    tally: tallies[0] as BarMemory["tally"],
+    wins,
+  };
 }

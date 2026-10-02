@@ -16,11 +16,15 @@ export interface Ingredient {
   item: string;
 }
 
+export type TableShape = "round" | "long";
+
 export interface PaloozaEvent {
   id: string;
   name: string;
   host_id: string;
   status: EventStatus;
+  table_shape: TableShape;
+  seating_set: boolean;
   current_drink_id: string | null;
   order_set: boolean;
   order_version: number;
@@ -34,7 +38,41 @@ export interface PaloozaEvent {
 export interface Participant {
   member_id: string;
   position: number | null;
+  /** Place around the real table (0…n-1), for napkin passing. */
+  seat: number | null;
   joined_at: string;
+}
+
+export interface NapkinPass {
+  id: string;
+  event_id: string;
+  from_id: string;
+  to_id: string;
+  text: string;
+  created_at: string;
+  read_at: string | null;
+}
+
+export type ChalkColor = "white" | "pink" | "yellow" | "teal";
+export interface ChalkNote {
+  id: string;
+  member_id: string;
+  text: string;
+  color: ChalkColor;
+  event_id: string | null;
+  created_at: string;
+}
+
+/** What the bar top remembers from every finished palooza. */
+export interface BarMemory {
+  /** One ring stain per drink ever presented. */
+  rings: { id: string; member_id: string; event_id: string }[];
+  /** One bottle cap per champion. */
+  caps: { event_id: string; event_name: string; member_id: string; date: string }[];
+  /** A napkin overheard at the last palooza, left on the bar. */
+  overheard: { text: string; member_id: string; event_name: string } | null;
+  tally: { paloozas: number; drinks: number; pours: number; napkins: number; photos: number; chalk: number };
+  wins: Record<string, number>;
 }
 
 export interface Drink {
@@ -115,6 +153,8 @@ export interface LiveEvent {
   scored_counts: Record<string, number>;
   comments: Comment[];
   reactions: Reaction[];
+  /** Napkins passed to or from this phone's person. */
+  napkins: NapkinPass[];
   results: EventResults | null;
 }
 
@@ -151,6 +191,8 @@ export interface Superlative {
   key: string;
   title: string;
   member_id: string;
+  /** For pair awards (secret pen pals). */
+  partner_id?: string;
   detail: string;
 }
 
@@ -160,7 +202,7 @@ export interface EventResults {
   overall: Podium;
   fair_winner: { drink_id: string; member_id: string } | null;
   superlatives: Superlative[];
-  totals: { drinks: number; scores: number; comments: number; reactions: number; top_emoji: string | null };
+  totals: { drinks: number; scores: number; comments: number; reactions: number; passes: number; top_emoji: string | null };
 }
 
 export interface HallOfFame {

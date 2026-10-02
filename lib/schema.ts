@@ -128,4 +128,37 @@ export const SCHEMA_STATEMENTS: string[] = [
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
   `CREATE INDEX IF NOT EXISTS reactions_drink_idx ON reactions (drink_id, created_at)`,
+
+  // ---- Seating & passed napkins ----------------------------------------------
+  // Where everyone sits around the real table, so a napkin flicked "that way"
+  // lands on whoever is sitting that way.
+  `ALTER TABLE event_participants ADD COLUMN IF NOT EXISTS seat integer`,
+  `ALTER TABLE events ADD COLUMN IF NOT EXISTS table_shape text NOT NULL DEFAULT 'round' CHECK (table_shape IN ('round','long'))`,
+  `ALTER TABLE events ADD COLUMN IF NOT EXISTS seating_set boolean NOT NULL DEFAULT false`,
+
+  // A napkin passed from one person to another: private between the two.
+  `CREATE TABLE IF NOT EXISTS napkin_passes (
+     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     event_id   uuid        NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+     from_id    uuid        NOT NULL REFERENCES members(id),
+     to_id      uuid        NOT NULL REFERENCES members(id),
+     text       text        NOT NULL CHECK (length(text) BETWEEN 1 AND 200),
+     created_at timestamptz NOT NULL DEFAULT now(),
+     read_at    timestamptz,
+     CHECK (from_id <> to_id)
+   )`,
+  `CREATE INDEX IF NOT EXISTS napkin_passes_to_idx ON napkin_passes (to_id, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS napkin_passes_event_idx ON napkin_passes (event_id)`,
+
+  // ---- The chalkboard ---------------------------------------------------------
+  // Anyone can write on it, any time; it outlives every palooza.
+  `CREATE TABLE IF NOT EXISTS chalk_notes (
+     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     member_id  uuid        NOT NULL REFERENCES members(id),
+     text       text        NOT NULL CHECK (length(text) BETWEEN 1 AND 140),
+     color      text        NOT NULL DEFAULT 'white' CHECK (color IN ('white','pink','yellow','teal')),
+     event_id   uuid        REFERENCES events(id) ON DELETE SET NULL,
+     created_at timestamptz NOT NULL DEFAULT now()
+   )`,
+  `CREATE INDEX IF NOT EXISTS chalk_notes_created_idx ON chalk_notes (created_at DESC)`,
 ];

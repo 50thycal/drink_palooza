@@ -155,7 +155,25 @@ function topEmoji(reactions: Reaction[]): string | null {
   return countBy(reactions.map((r) => r.emoji))?.id ?? null;
 }
 
-export function eventResults(drinks: DrinkInput[], scores: Score[], comments: Comment[], reactions: Reaction[]): EventResults {
+export interface PassInput {
+  from_id: string;
+  to_id: string;
+}
+
+/** Awards for napkins passed across the table. */
+export function passAwards(passes: PassInput[]): Superlative[] {
+  const out: Superlative[] = [];
+  const sender = countBy(passes.map((p) => p.from_id));
+  if (sender && sender.n >= 2) out.push({ key: "postman", title: "The Postman", member_id: sender.id, detail: `Passed ${sender.n} napkins across the table` });
+  const pairs = countBy(passes.map((p) => [p.from_id, p.to_id].sort().join("|")));
+  if (pairs && pairs.n >= 3) {
+    const [a, b] = pairs.id.split("|");
+    out.push({ key: "penpals", title: "Secret Pen Pals", member_id: a, partner_id: b, detail: `${pairs.n} napkins passed between them` });
+  }
+  return out;
+}
+
+export function eventResults(drinks: DrinkInput[], scores: Score[], comments: Comment[], reactions: Reaction[], passes: PassInput[] = []): EventResults {
   const results = drinkResults(drinks, scores, reactions);
   const ranked = rankOverall(results);
   const fairRanked = results.filter((r) => r.fair != null).sort((a, b) => b.fair! - a.fair! || (b.overall ?? 0) - (a.overall ?? 0));
@@ -164,12 +182,13 @@ export function eventResults(drinks: DrinkInput[], scores: Score[], comments: Co
     podiums: CATEGORY_KEYS.map((k) => categoryPodium(results, k)),
     overall: podium("overall", ranked, (r) => r.overall!),
     fair_winner: fairRanked[0] ? { drink_id: fairRanked[0].drink_id, member_id: fairRanked[0].member_id } : null,
-    superlatives: superlatives(results, scores, comments, reactions),
+    superlatives: [...superlatives(results, scores, comments, reactions), ...passAwards(passes)],
     totals: {
       drinks: drinks.length,
       scores: scores.length,
       comments: comments.length,
       reactions: reactions.length,
+      passes: passes.length,
       top_emoji: topEmoji(reactions),
     },
   };

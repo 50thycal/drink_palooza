@@ -2,7 +2,7 @@
 
 import useSWR, { mutate } from "swr";
 import { getMemberId } from "./me";
-import type { CatalogEntry, DrinkDetail, HallOfFame, HomeState } from "./types";
+import type { BarMemory, CatalogEntry, ChalkNote, DrinkDetail, HallOfFame, HomeState } from "./types";
 
 function headers(): Record<string, string> {
   const me = getMemberId();
@@ -41,6 +41,14 @@ export function useCatalog() {
 
 export function useHall() {
   return useSWR<HallOfFame>("/api/hall", fetcher, { refreshInterval: 30_000 });
+}
+
+export function useMemory() {
+  return useSWR<BarMemory>("/api/memory", fetcher, { refreshInterval: 60_000, revalidateOnFocus: false });
+}
+
+export function useChalk() {
+  return useSWR<ChalkNote[]>("/api/chalk", fetcher, { refreshInterval: 5_000, keepPreviousData: true });
 }
 
 /**
