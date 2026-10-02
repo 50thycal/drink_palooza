@@ -58,11 +58,11 @@ LOBBY ──randomize──▶ ORDER SET ──start──▶ LIVE (presenter 1 
 members              id, name, emoji, color
 events               id, name, date, host_id, status, current_drink_id, wrap_slide, options jsonb (theme/secret ingredient)
 event_participants   event_id, member_id, position
-categories           event_id, key, label, description, weight, position     (Taste weight = 2)
 drinks               event_id, member_id, name, story, glass, garnish, ingredients jsonb [{amount,unit,item}], method,
                      status (upcoming|presenting|done), started_at, ended_at
 photos               drink_id, uploader_id, blob_url, width, height, is_hero
-scores               drink_id, member_id, category_id, score 1–10     UNIQUE(drink_id, member_id, category_id)
+scores               drink_id, member_id, category, score 1–10        PK(drink_id, member_id, category)
+                     (categories + weights live in lib/constants.ts; Taste weight = 2)
 notes                drink_id, member_id, text                         private to the author
 comments             drink_id, member_id, text, created_at
 reactions            drink_id, member_id, emoji, created_at
@@ -101,6 +101,10 @@ person/spirit/ingredient, sort by score) · Drink page · Hall of Fame · Settin
 5. Wrapped
 6. Hall of Fame
 7. (Later) Theme / secret ingredient option
+
+## Status
+
+Phases 1–6 are built (see README). Remaining: the optional theme / secret-ingredient mode (phase 7).
 
 ## Theme — "The Gilded Pour" (Art Deco Prohibition speakeasy)
 
