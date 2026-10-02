@@ -25,8 +25,8 @@ Built on the same foundation as [MovieTime](https://github.com/50thycal/movietim
 | 10 | No rating your own drink (enforced on the server) | ✅ decided |
 | 11 | Scores stay hidden until Wrapped. Comments and reactions are visible live. | ✅ decided |
 | 12 | Scores stay editable until Wrapped starts, with a "My scores" side-by-side view to recalibrate and counter order bias | ⚙️ default |
-| 13 | **Scoring is pouring.** One glass per category; empty glass = 1, full glass = 10 | ✅ decided |
-| 14 | **Presenter soundboard** with 5 sounds covering the emotional range | ✅ decided |
+| 13 | **Scoring is pouring.** One glass per category; empty glass = 1, full glass = 10. Hold to pour, swipe up/down to adjust, tap Next to move on (no auto-advance) | ✅ decided |
+| 14 | **Presenter soundboard** with 6 sounds: womp womp, rimshot, applause, rap air horn, drumroll, explosion. Optional real recordings in `public/sounds/` | ✅ decided |
 | 15 | **Hosting: Vercel**; everyone plays on their own phone (portrait, mobile-first) | ✅ decided |
 | 16 | After the last presenter, a **"Last Call"** state lets everyone finish or adjust scores; then the host starts the reveal | ⚙️ default |
 

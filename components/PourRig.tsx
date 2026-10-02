@@ -4,14 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { CATEGORIES, type CategoryKey } from "@/lib/constants";
 import { clink, startPourSound } from "@/lib/sounds";
 import { useTilt } from "@/lib/tilt";
-import { GlassArt, GLASSES, levelToScore, levelY, scoreToLevel, Shaker } from "./art/Glass";
+import { GlassArt, levelToScore, levelY, scoreToLevel, Shaker } from "./art/Glass";
 
 const POUR_SECONDS = 2.6; // empty → full while holding the bottle
+const SWIPE_PX_PER_POINT = 28; // vertical finger travel per score point
+const SWIPE_DEADZONE_PX = 6; // a tap isn't a swipe
 
 /**
  * One glass on the bar and the bottle beside it. Two ways to score:
  *  - hold the bottle: it tips and pours, the level rises; let go to stop.
- *  - drag on the glass: set the level directly (and to pour some back out).
+ *  - swipe up or down anywhere on the glass: nudge the score from where it
+ *    is (about one point per finger-width), to top up or pour some back out.
  * Either way the level snaps to a whole score on release: empty glass = 1,
  * full to the rim = 10.
  */
@@ -20,11 +23,14 @@ export function PourRig({
   value,
   onCommit,
   disabled = false,
+  footer,
 }: {
   category: CategoryKey;
   value: number | null | undefined;
   onCommit: (score: number) => void;
   disabled?: boolean;
+  /** Replaces the how-to hint once there's something better to show (the Next button). */
+  footer?: React.ReactNode;
 }) {
   const def = CATEGORIES.find((c) => c.key === category)!;
   const tilt = useTilt();
@@ -34,7 +40,6 @@ export function PourRig({
   const busy = pouring || dragging;
   const levelRef = useRef(level);
   levelRef.current = level;
-  const svgRef = useRef<SVGSVGElement>(null);
   const stopSound = useRef<() => void>(() => {});
   const lastScore = useRef<number | null>(null);
 
@@ -92,37 +97,34 @@ export function PourRig({
   }
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
-  // ---- drag the level on the glass ----
-  function levelAt(clientX: number, clientY: number) {
-    const svg = svgRef.current;
-    const ctm = svg?.getScreenCTM();
-    if (!svg || !ctm) return levelRef.current ?? 0;
-    const pt = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
-    const g = GLASSES[category];
-    return Math.max(0, Math.min(1, (g.bottom - pt.y) / (g.bottom - g.top)));
-  }
-  function startDrag(e: React.PointerEvent) {
-    if (disabled) return;
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+  // ---- swipe up/down to adjust ----
+  const swipe = useRef<{ y: number; from: number | null; moved: boolean } | null>(null);
+  function startSwipe(e: React.PointerEvent) {
+    if (disabled || pouring) return;
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    swipe.current = { y: e.clientY, from: levelRef.current, moved: false };
     setDragging(true);
-    const l = levelAt(e.clientX, e.clientY);
+  }
+  function moveSwipe(e: React.PointerEvent) {
+    const s = swipe.current;
+    if (!s) return;
+    const dy = s.y - e.clientY;
+    if (!s.moved && Math.abs(dy) < SWIPE_DEADZONE_PX) return;
+    s.moved = true;
+    const l = Math.max(0, Math.min(1, (s.from ?? 0) + dy / (SWIPE_PX_PER_POINT * 9)));
     stepFeedback(l);
     setLevel(l);
   }
-  function moveDrag(e: React.PointerEvent) {
-    if (!dragging) return;
-    const l = levelAt(e.clientX, e.clientY);
-    stepFeedback(l);
-    setLevel(l);
-  }
-  function endDrag() {
-    if (!dragging) return;
+  function endSwipe() {
+    const s = swipe.current;
+    if (!s) return;
+    swipe.current = null;
     setDragging(false);
-    commit();
+    if (s.moved) commit();
+    else setLevel(s.from);
   }
 
   const shown = level != null ? levelToScore(level) : null;
-  const g = GLASSES[category];
 
   return (
     <div className="relative select-none" style={{ touchAction: "none" }}>
@@ -136,7 +138,16 @@ export function PourRig({
         {def.weight > 1 && <div className="mt-1 inline-block rounded-full border border-gold px-2 py-0.5 font-deco text-[11px] font-bold text-gold">COUNTS ×{def.weight}</div>}
       </div>
 
-      <svg ref={svgRef} viewBox="0 -170 200 430" className="mx-auto block h-[min(52dvh,430px)] w-full" aria-label={`${def.label} glass, ${shown ?? "not poured"}`}>
+      <svg
+        viewBox="0 -170 200 430"
+        className="mx-auto block h-[min(46dvh,400px)] w-full"
+        style={{ cursor: "ns-resize" }}
+        aria-label={`${def.label} glass, ${shown ?? "not poured"}. Swipe up or down to adjust.`}
+        onPointerDown={startSwipe}
+        onPointerMove={moveSwipe}
+        onPointerUp={endSwipe}
+        onPointerCancel={endSwipe}
+      >
         <defs>
           <linearGradient id="rig-bar" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#6a3420" />
@@ -169,24 +180,20 @@ export function PourRig({
         <Shaker tipped={pouring} />
 
         {/* hit areas */}
-        <path
-          d={g.outline}
-          fill="transparent"
-          transform="translate(100 120) scale(1.25) translate(-100 -120)"
-          onPointerDown={startDrag}
-          onPointerMove={moveDrag}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          style={{ cursor: "ns-resize" }}
-        />
         <rect
           x={120}
           y={-170}
           width={80}
           height={140}
           fill="transparent"
-          onPointerDown={startPour}
-          onPointerUp={endPour}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            startPour(e);
+          }}
+          onPointerUp={(e) => {
+            e.stopPropagation();
+            endPour();
+          }}
           onPointerCancel={endPour}
           onContextMenu={(e) => e.preventDefault()}
           style={{ cursor: "pointer" }}
@@ -231,7 +238,7 @@ export function PourRig({
           +
         </button>
       </div>
-      <p className="mt-2 text-center text-xs text-champagne/55">Hold the bottle to pour · drag the glass to adjust · empty = 1, full = 10</p>
+      {footer ?? <p className="mt-2 text-center text-xs text-champagne/55">Hold the bottle to pour · swipe up or down to adjust · empty = 1, full = 10</p>}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CATEGORIES, REACTIONS, type CategoryKey } from "@/lib/constants";
 import { refreshAll, send, useDrink } from "@/lib/api";
 import type { Comment, Drink, ScoreMap } from "@/lib/types";
@@ -100,7 +100,6 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
   const [dir, setDir] = useState(1);
   const scores: ScoreMap = { ...mine, ...pending };
   const cat = CATEGORIES[index];
-  const advanceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Once the server has a pour, drop the optimistic copy.
   useEffect(() => {
@@ -110,16 +109,14 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
       return next;
     });
   }, [mine]);
-  useEffect(() => () => clearTimeout(advanceTimer.current), []);
-
   const goTo = (i: number) => {
-    clearTimeout(advanceTimer.current);
     setDir(i > index ? 1 : -1);
     setIndex((i + CATEGORIES.length) % CATEGORIES.length);
   };
 
+  // Pouring never moves you on by itself: you settle the score (pour, then
+  // swipe to adjust) and tap Next when you're happy with it.
   async function commit(key: CategoryKey, score: number) {
-    const wasEmpty = scores[key] == null;
     setPending((p) => ({ ...p, [key]: score }));
     try {
       await send("PUT", `/api/drinks/${drinkId}/scores`, { category: key, score });
@@ -131,12 +128,6 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
         return next;
       });
       toast((err as Error).message);
-      return;
-    }
-    // First pour into a glass slides you on to the next empty one.
-    if (wasEmpty) {
-      const nextEmpty = CATEGORIES.findIndex((c, i) => i !== index && c.key !== key && scores[c.key] == null);
-      if (nextEmpty !== -1) advanceTimer.current = setTimeout(() => goTo(nextEmpty), 900);
     }
   }
 
@@ -154,16 +145,7 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
         ))}
       </div>
 
-      <motion.div
-        className="mt-3 text-center"
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.3}
-        onDragEnd={(_, info) => {
-          if (info.offset.x < -50) goTo(index + 1);
-          else if (info.offset.x > 50) goTo(index - 1);
-        }}
-      >
+      <div className="mt-3 text-center">
         <div className="flex items-center justify-between">
           <button onClick={() => goTo(index - 1)} className="px-3 py-2 text-2xl text-gold" aria-label="Previous glass">
             ‹
@@ -176,7 +158,7 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
             ›
           </button>
         </div>
-      </motion.div>
+      </div>
 
       <div className="relative mt-2 overflow-hidden">
         <AnimatePresence mode="popLayout" initial={false} custom={dir}>
@@ -188,7 +170,13 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
             exit={{ x: dir * -300, opacity: 0 }}
             transition={{ type: "spring", damping: 26, stiffness: 260 }}
           >
-            <PourRig category={cat.key} value={scores[cat.key]} onCommit={(s) => commit(cat.key, s)} disabled={disabled} />
+            <PourRig
+              category={cat.key}
+              value={scores[cat.key]}
+              onCommit={(s) => commit(cat.key, s)}
+              disabled={disabled}
+              footer={scores[cat.key] != null ? <NextGlass index={index} scores={scores} onGo={goTo} /> : undefined}
+            />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -196,6 +184,25 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
         {done === CATEGORIES.length ? "✓ ALL FOUR POURED — CHANGE THEM UNTIL THE REVEAL" : `${done} OF ${CATEGORIES.length} GLASSES POURED`}
       </div>
     </div>
+  );
+}
+
+/** Shown once the current glass has a score: the only way on to the next one. */
+function NextGlass({ index, scores, onGo }: { index: number; scores: ScoreMap; onGo: (i: number) => void }) {
+  const remaining = CATEGORIES.map((c, i) => ({ c, i })).filter(({ c, i }) => i !== index && scores[c.key] == null);
+  // Prefer the next empty glass to the right, wrapping round.
+  const target = remaining.find(({ i }) => i > index) ?? remaining[0];
+  if (!target) return <p className="mt-3 text-center font-deco text-sm font-bold tracking-wider text-neon-teal/80">All four poured · swipe to adjust any time</p>;
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileTap={{ scale: 0.97 }}
+      onClick={() => onGo(target.i)}
+      className="btn-ghost mx-auto mt-3 flex items-center gap-2 rounded-full bg-black/45 px-5 py-2.5 text-base"
+    >
+      Next glass: <span className="text-gold-2">{target.c.label}</span> ›
+    </motion.button>
   );
 }
 

@@ -23,9 +23,9 @@ LOBBY ──shake up the order──▶ LIVE: presenter 1 → … → N ──�
 - **Sign-in.** Tap your name, or "I'm new here". There's no password; the phone remembers you, and you can switch in Settings.
 - **Order.** Random. The server shuffles once, and every phone plays the same slot-machine reveal. Re-roll until the show starts; late joiners go to the back.
 - **Categories.** Taste (**counts ×2**), Appearance, Creativity, Presentation. Each has its own glass: *The Stoic*, *The Showpiece*, *The Wild Card*, and *The Showstopper*, which lights a sparkler at 10.
-- **Scoring.** Hold the bottle to pour, or drag the glass. Empty = 1, full = 10, whole numbers only. Pours stay hidden from everyone else and editable until the reveal.
+- **Scoring.** Hold the bottle to pour, then swipe up or down on the glass to fine-tune. Empty = 1, full = 10, whole numbers only. Nothing moves on by itself: tap **Next glass** when you're happy. Pours stay hidden from everyone else and editable until the reveal.
 - **During a presentation.** Emoji reactions float up on every phone. Comments go on napkins, notes are private, and anyone can add photos.
-- **Presenter soundboard.** Womp womp, ba-dum-tss, applause, air horn, drumroll. All five are synthesized in the browser, so there are no audio files.
+- **Presenter soundboard.** Womp womp, ba-dum-tss, applause, air horn, drumroll, explosion. All six are synthesized in the browser (with a room reverb), so no audio files are needed. To use a real recording instead, drop `public/sounds/<name>.mp3` in (see that folder's README).
 - **The reveal.** Category podiums opened 3rd → 1st, honourable mentions (harshest critic, most generous, most divisive, crowd favourite, chatterbox, hype machine), a "fair mode" curve that normalizes each person's scoring, then the champion.
 - **Overall score.** `(2·Taste + Appearance + Creativity + Presentation) / 5`. Ties go to the better Taste, then to whoever more people rated.
 

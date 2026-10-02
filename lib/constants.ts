@@ -50,6 +50,7 @@ export const SOUNDS = [
   { key: "applause", emoji: "👏", label: "Applause", mood: "Happy" },
   { key: "airhorn", emoji: "📯", label: "Air horn", mood: "Hype" },
   { key: "drumroll", emoji: "🪘", label: "Drumroll", mood: "Suspense" },
+  { key: "boom", emoji: "💥", label: "Explosion", mood: "Mind blown" },
 ] as const;
 export type SoundKey = (typeof SOUNDS)[number]["key"];
 
