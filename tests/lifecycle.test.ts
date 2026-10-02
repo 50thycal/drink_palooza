@@ -168,8 +168,9 @@ test("photos fall back to Postgres without a Blob store, and the maker's first i
   const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0, 255]);
   const photo = await s.addPhoto(sql, ids.calDrink, ids.cal, { bytes, mime: "image/jpeg", width: 10, height: 20 }, async () => null);
   assert.equal(photo.url, `/api/photos/${photo.id}`);
-  const back = await s.photoData(sql, photo.id);
-  assert.deepEqual(new Uint8Array(back!.bytes), bytes);
+  const back = await s.photoSource(sql, photo.id);
+  assert.equal(back?.kind, "bytes");
+  assert.deepEqual(new Uint8Array((back as { bytes: Buffer }).bytes), bytes);
   const detail = await s.loadDrinkDetail(sql, ids.calDrink, ids.cal);
   assert.equal(detail.drink.hero_photo_id, photo.id);
   await rejects(s.deletePhoto(sql, photo.id, ids.sam), 403);
@@ -184,4 +185,21 @@ test("a host can cancel an unstarted palooza; leaving hands off hosting", async 
   assert.equal((await s.openEvent(sql))!.host_id, ids.sam);
   await s.cancelEvent(sql, e.id, ids.sam);
   assert.equal(await s.openEvent(sql), null);
+});
+
+test("private Blob photos are served through the app; public ones straight from the CDN", async () => {
+  const bytes = new Uint8Array([1, 2, 3]);
+  const priv = await s.addPhoto(sql, ids.calDrink, ids.zoe, { bytes, mime: "image/jpeg", width: 1, height: 1 }, async (id) => ({
+    url: `https://store.private.blob.vercel-storage.com/drinks/${id}.jpg`,
+    access: "private",
+  }));
+  assert.equal(priv.url, `/api/photos/${priv.id}`);
+  assert.deepEqual(await s.photoSource(sql, priv.id), { kind: "blob", url: `https://store.private.blob.vercel-storage.com/drinks/${priv.id}.jpg`, access: "private" });
+  const pub = await s.addPhoto(sql, ids.calDrink, ids.zoe, { bytes, mime: "image/jpeg", width: 1, height: 1 }, async () => ({
+    url: "https://store.public.blob.vercel-storage.com/x.jpg",
+    access: "public",
+  }));
+  assert.equal(pub.url, "https://store.public.blob.vercel-storage.com/x.jpg");
+  const gone = await s.deletePhoto(sql, priv.id, ids.zoe);
+  assert.equal(gone.blob_url, `https://store.private.blob.vercel-storage.com/drinks/${priv.id}.jpg`);
 });
