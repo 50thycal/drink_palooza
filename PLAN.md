@@ -159,8 +159,14 @@ sections are **Art Deco coasters**:
 Tapping a coaster drives the camera there.
 
 **The Bartenders.** Two illustrated Art Deco bartenders behind the bar:
-- **Mabel**, a flapper: finger-wave bob, beaded headband with a feather, pearls.
-- **Jasper**, a dapper gentleman: slicked hair, bow tie, vest, sleeve garters.
+- **Mabel**, a blonde flapper: platinum-gold finger-wave bob, rhinestone headband with an ostrich plume, sea-green eyes, cupid's-bow lips, beaded emerald drop-waist dress with fringe, pearls, black satin opera gloves, cobbler shaker.
+- **Jasper**, an Italian gentleman bartender: olive skin, slicked-back black hair with a sharp side part, square jaw with a hint of five o'clock shadow, a tight clean-cut pencil moustache, broad shoulders and big forearms in rolled shirtsleeves with gold garters, pinstriped vest, bow tie, watch chain.
+
+Painted-poster style: gradients for skin, hair and fabric rather than flat fills. `portrait` crops the same drawing to the head for the in-game cameo.
+
+**They talk.** `lib/banter.ts` writes their lines from the live state:
+- *At the bar* they hold a running conversation: the line you need first (join up, write your recipe, snap a photo), then back-and-forths that call people out by name ("Still no recipe from Zoe." / "Zoe, it's a cocktail, not a novel."), headcount jokes, champion ribbing, and a stock of we're-going-to-drink-too-much gags. Tap the bubble to move them on.
+- *During the game* one of them leans into frame with a short remark: a new presenter ("Mezcal? Bold choice, Cal."), your own pour once it settles (a 1 or a 10 always gets one), someone finishing, the last straggler by name, every glass in, a flurry of reactions, a napkin, or idle chatter if it goes quiet. At most one every 9 seconds, so they season the game rather than narrate it.
 
 Each visit, one of them speaks ("What'll it be, Cal?"). The choices are a
 cocktail-menu card, not a row of buttons: join tonight's palooza, shake up the

@@ -7,6 +7,7 @@ import { refreshAll, send, useDrink } from "@/lib/api";
 import type { Comment, Drink, ScoreMap } from "@/lib/types";
 import { useApp } from "../AppContext";
 import { GlassIcon } from "../art/Glass";
+import { announcePour } from "../BarBanter";
 import { BarTray } from "../BarTray";
 import { PhotoStrip, RecipeCard } from "../Drink";
 import { PourRig } from "../PourRig";
@@ -123,6 +124,7 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
     setPending((p) => ({ ...p, [key]: score }));
     try {
       await send("PUT", `/api/drinks/${drinkId}/scores`, { category: key, score });
+      announcePour(key, score);
       void refreshAll();
     } catch (err) {
       setPending((p) => {

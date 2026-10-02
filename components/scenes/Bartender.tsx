@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MEMBER_EMOJIS } from "@/lib/constants";
 import { eventAction, refreshAll, send, useMemory } from "@/lib/api";
+import { sceneExchanges, type Line } from "@/lib/banter";
 import { playSound } from "@/lib/sounds";
 import { enableTilt, tiltEnabled, tiltNeedsPermission, useShake } from "@/lib/tilt";
 import type { LiveEvent, Member } from "@/lib/types";
@@ -13,8 +14,6 @@ import { ChalkboardSheet } from "../Chalkboard";
 import { PrepSheet } from "../Drink";
 import { PassNapkin, SeatingSheet } from "../Seating";
 import { Avatar, BackPlaque, DecoDivider, toast, useBusy } from "../ui";
-
-type Speaker = "mabel" | "jasper";
 
 const MET_KEY = "drinkpalooza:met-bartenders";
 
@@ -26,9 +25,9 @@ const MET_KEY = "drinkpalooza:met-bartenders";
 export function BartenderScene() {
   const app = useApp();
   const { me, live, back } = app;
-  const [speaker] = useState<Speaker>(() => (Math.random() < 0.5 ? "mabel" : "jasper"));
   const { data: memory } = useMemory();
-  const line = useLine(speaker, memory?.wins ?? {});
+  const { line, next } = useDialogue(app, memory?.wins ?? {});
+  const speaker = line.who;
   // You meet the bartenders properly once per phone; after that they step
   // back so the menu sits higher. Tap them to bring the full view back.
   const [compact, setCompact] = useState(() => {
@@ -85,15 +84,19 @@ export function BartenderScene() {
         </div>
         {/* speech bubble */}
         <motion.div
-          key={line(app)}
+          key={`${line.who}:${line.text}`}
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", damping: 14, delay: 0.5 }}
+          transition={{ type: "spring", damping: 14, delay: 0.15 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            next();
+          }}
           className={`paper absolute top-[max(3.25rem,calc(env(safe-area-inset-top)+2.5rem))] z-10 max-w-[70%] rounded-2xl px-4 py-2 font-display text-[16px] leading-snug shadow-xl ${
             speaker === "mabel" ? "left-4 origin-bottom-right" : "right-4 origin-bottom-left"
           }`}
         >
-          {line(app)}
+          {line.text}
           <span className={`absolute -bottom-2 h-4 w-4 rotate-45 bg-cream ${speaker === "mabel" ? "right-8" : "left-8"}`} />
           <span className="mt-0.5 block font-deco text-[11px] font-bold tracking-widest opacity-60">— {speaker === "mabel" ? "MABEL" : "JASPER"}</span>
         </motion.div>
@@ -110,36 +113,49 @@ export function BartenderScene() {
   );
 }
 
-/** What the bartender says, by state. */
-function useLine(speaker: Speaker, wins: Record<string, number>) {
-  return ({ me, live, joined, memberById }: ReturnType<typeof useApp>) => {
-    const m = speaker === "mabel";
-    if (!me) return m ? "Evening, darling! Who's drinking tonight?" : "Evening. Whose tab am I starting?";
-    // The bar remembers its champions.
-    const titles = wins[me.id] ?? 0;
-    if ((!live || live.event.status === "lobby") && titles >= 3)
-      return m ? `Well, if it isn't the legend! ${titles} titles, ${me.name}. The usual?` : `${me.name}. ${titles}-time champion. Your stool's been kept warm.`;
-    if (!live && titles > 0)
-      return m ? `Our champ! Throw another palooza and defend that crown, ${me.name}?` : `Evening, champion. The others want a rematch, ${me.name}.`;
-    if (live?.event.status === "lobby" && titles > 0 && joined)
-      return m ? `Our champ's back! Defending the crown tonight, ${me.name}?` : `The reigning champion returns. Don't get comfortable, ${me.name}.`;
-    if (!live) return m ? `Quiet night, ${me.name}. Shall we throw a palooza?` : `Slow one tonight, ${me.name}. Fancy opening a palooza?`;
-    const presenter = memberById(live.current?.member_id);
-    switch (live.event.status) {
-      case "lobby":
-        if (!joined) return m ? `Pull up a stool, ${me.name}! ${live.event.name} is filling up.` : `There's a seat for you at ${live.event.name}, ${me.name}.`;
-        return m ? "Get your recipe written up, sugar. The show starts soon!" : "Write up your recipe while we set the order.";
-      case "live":
-        if (live.current?.member_id === me.id) return m ? "You're on, darling! Knock 'em dead." : "Your turn, friend. The stage is yours.";
-        return presenter ? `${presenter.name} is presenting${live.current?.name ? ` the ${live.current.name}` : ""}. Take your seat!` : "The show's on!";
-      case "lastcall":
-        return m ? "Last call! Get those pours in, sweetheart." : "Last call. Finish your pours.";
-      case "wrapped":
-        return m ? "The verdict is in! Eyes on the wall!" : "The envelopes are open. To the wall!";
-      default:
-        return "Cheers!";
-    }
-  };
+/**
+ * Mabel and Jasper talk among themselves: the line you need first, then
+ * running jokes, back-and-forths and call-outs by name, looping. Tap the
+ * bubble to hurry them along.
+ */
+function useDialogue(app: ReturnType<typeof useApp>, wins: Record<string, number>) {
+  const { me, live, joined, memberById } = app;
+  // Re-script only when something worth talking about changes, not on every poll.
+  const key = JSON.stringify([
+    me?.id,
+    me?.name,
+    joined,
+    live?.event.status,
+    live?.event.name,
+    live?.current?.id,
+    live?.participants.map((p) => p.member_id),
+    live?.drinks.map((d) => [d.member_id, d.has_recipe, !!d.hero_url]),
+    live?.waiting_on.length === 1 ? live.waiting_on : live?.waiting_on.length,
+    wins,
+  ]);
+  const script = useMemo(
+    () => sceneExchanges({ me: me ? { id: me.id, name: me.name } : null, live, joined, nameOf: (id) => memberById(id)?.name ?? null, wins }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key],
+  );
+  const [pos, setPos] = useState({ beat: 0, line: 0 });
+  useEffect(() => setPos({ beat: 0, line: 0 }), [script]);
+  const beat = script[pos.beat % script.length] ?? script[0];
+  const line: Line = beat[Math.min(pos.line, beat.length - 1)];
+  const next = useCallback(() => {
+    setPos((p) => {
+      const b = script[p.beat % script.length];
+      return p.line + 1 < b.length ? { beat: p.beat, line: p.line + 1 } : { beat: (p.beat + 1) % script.length, line: 0 };
+    });
+  }, [script]);
+  useEffect(() => {
+    if (script.length === 1 && beat.length === 1) return;
+    const lastOfBeat = pos.line >= beat.length - 1;
+    const ms = Math.min(6500, Math.max(2800, line.text.length * 55)) + (lastOfBeat ? 1600 : 0);
+    const t = window.setTimeout(next, ms);
+    return () => window.clearTimeout(t);
+  }, [pos, line, beat, script, next]);
+  return { line, next };
 }
 
 // ---- Sign-in ---------------------------------------------------------------

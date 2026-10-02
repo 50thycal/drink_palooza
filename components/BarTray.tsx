@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useRef, useState } from "react";
 import type { Comment } from "@/lib/types";
+import { BarBanter } from "./BarBanter";
 import { ChalkboardSheet } from "./Chalkboard";
 import { uploadDrinkPhoto } from "./Drink";
 import { Napkins, NotesSheet } from "./scenes/Pour";
@@ -59,6 +60,7 @@ export function BarTray({
         </div>
       </div>
 
+      <BarBanter />
       {/* No `capture`: iPhone then offers "Take Photo" or "Photo Library" itself. */}
       <input
         ref={photo}
