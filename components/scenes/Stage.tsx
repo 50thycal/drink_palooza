@@ -6,9 +6,10 @@ import { SOUNDS } from "@/lib/constants";
 import { eventAction, send } from "@/lib/api";
 import { playSound, preloadSounds } from "@/lib/sounds";
 import { useApp } from "../AppContext";
-import { PhotoButton, PrepSheet } from "../Drink";
-import { Avatar, BackPlaque, DecoDivider, FloatingReactions, Neon, Sunburst, toast, useBusy } from "../ui";
-import { ChalkButton, Napkins, ReactionTray, RecipeSheet } from "./Pour";
+import { BarTray, TrayButton } from "../BarTray";
+import { PrepSheet } from "../Drink";
+import { Avatar, BackPlaque, FloatingReactions, Neon, Sunburst, toast, useBusy } from "../ui";
+import { ReactionTray, RecipeSheet } from "./Pour";
 
 /**
  * The neon wall, as the presenter sees it. Your name in lights, your drink
@@ -45,7 +46,7 @@ export function StageScene() {
   };
 
   return (
-    <div className="wall relative min-h-full overflow-hidden pb-[max(2rem,env(safe-area-inset-bottom))]">
+    <div className="wall relative flex min-h-full flex-col overflow-x-clip">
       <BackPlaque onClick={back} />
       <FloatingReactions reactions={live.reactions} me={meId} local={local} />
       <Sunburst className="pointer-events-none absolute inset-x-0 top-10 mx-auto w-[130%] max-w-none -translate-x-[11%] opacity-60" opacity={0.2} rays={21} />
@@ -75,7 +76,7 @@ export function StageScene() {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="relative mx-auto mt-6 block aspect-[4/5] w-[min(72vw,300px)] overflow-hidden rounded-t-full border-[3px] border-gold bg-black/50 p-2 shadow-[0_0_40px_rgba(212,175,55,0.25)]"
+          className="relative mx-auto mt-6 block aspect-[4/5] w-[min(62vw,260px)] overflow-hidden rounded-t-full border-[3px] border-gold bg-black/50 p-2 shadow-[0_0_40px_rgba(212,175,55,0.25)]"
         >
           <div className="h-full w-full overflow-hidden rounded-t-full border border-gold/60">
             {hero ? (
@@ -103,66 +104,68 @@ export function StageScene() {
         </div>
       </div>
 
-      {mine ? (
-        <div className="relative mt-6 px-4">
-          <DecoDivider className="mx-6 mb-4" />
-          <div className="mb-2 text-center font-deco text-xs font-bold tracking-[0.4em] text-champagne/70">THE SOUNDBOARD</div>
-          <div className="mx-auto grid max-w-xs grid-cols-3 gap-x-5 gap-y-3">
-            {SOUNDS.map((s) => (
-              <div key={s.key} className="flex flex-col items-center gap-1">
-                <motion.button
-                  whileTap={{ scale: 0.88 }}
-                  onClick={() => sound(s.key, s.emoji)}
-                  className="flex aspect-square w-full items-center justify-center rounded-full border-2 border-gold bg-[radial-gradient(circle_at_35%_30%,#3a2a10,#0d0b09_70%)] shadow-[0_4px_0_#5c4510,0_0_18px_rgba(212,175,55,0.2)]"
-                  aria-label={s.label}
-                >
-                  <span className="text-3xl leading-none">{s.emoji}</span>
-                </motion.button>
-                <span className="text-center font-deco text-[11px] font-bold leading-tight tracking-wide text-champagne/75">{s.label}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <button onClick={() => setPrep(true)} className="btn-ghost rounded-full bg-black/40 py-2.5 text-sm">
-              ✎ Edit my recipe
-            </button>
-            <PhotoButton drinkId={drink.id} label="Photo" dark />
-          </div>
-          <button
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                if (poured < raters && !confirm(`${raters - poured} still pouring. Pass the stage anyway? They can keep pouring.`)) return;
-                await eventAction(live.event.id, "advance", { drink_id: drink.id });
-                toast("Take a bow 🎩");
-              })
-            }
-            className="btn-gold mt-4 w-full rounded-full py-4 text-xl"
-          >
-            Done presenting
-          </button>
-          <PrepSheet drinkId={drink.id} open={prep} onClose={() => setPrep(false)} />
-        </div>
-      ) : (
-        <div className="relative mt-4">
-          {me && <ReactionTray drinkId={drink.id} onLocal={(emoji) => setLocal((l) => [...l.slice(-20), { id: `local-${Date.now()}`, emoji }])} />}
-          {isHost && (
-            <button
-              disabled={busy}
-              onClick={() =>
-                confirm(`Move on from ${presenter?.name}?`) && run(() => eventAction(live.event.id, "advance", { drink_id: drink.id }))
-              }
-              className="mx-auto mt-4 block font-deco text-xs font-bold tracking-widest text-champagne/60 underline"
-            >
-              HOST: SKIP TO THE NEXT PRESENTER
-            </button>
-          )}
-        </div>
+      {!mine && isHost && (
+        <button
+          disabled={busy}
+          onClick={() => confirm(`Move on from ${presenter?.name}?`) && run(() => eventAction(live.event.id, "advance", { drink_id: drink.id }))}
+          className="relative mx-auto mt-4 block font-deco text-xs font-bold tracking-widest text-champagne/60 underline"
+        >
+          HOST: SKIP TO THE NEXT PRESENTER
+        </button>
       )}
+      <div className="flex-1" />
 
-      {me && <Napkins drinkId={drink.id} comments={live.comments} />}
-      {me && <ChalkButton />}
+      {mine ? (
+        <BarTray
+          drinkId={drink.id}
+          comments={live.comments}
+          note={null}
+          extra={<TrayButton icon="✎" label="Recipe" onClick={() => setPrep(true)} />}
+          top={
+            <>
+              {/* the soundboard: one row of brass buttons */}
+              <div className="grid grid-cols-6 gap-1.5">
+                {SOUNDS.map((s) => (
+                  <div key={s.key} className="flex flex-col items-center gap-0.5">
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => sound(s.key, s.emoji)}
+                      className="flex aspect-square w-full max-w-[52px] items-center justify-center rounded-full border-2 border-gold bg-[radial-gradient(circle_at_35%_30%,#3a2a10,#0d0b09_70%)] shadow-[0_3px_0_#5c4510,0_0_14px_rgba(212,175,55,0.2)]"
+                      aria-label={s.label}
+                    >
+                      <span className="text-[22px] leading-none">{s.emoji}</span>
+                    </motion.button>
+                    <span className="text-center font-deco text-[9px] font-bold leading-tight text-champagne/70">{s.label}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    if (poured < raters && !confirm(`${raters - poured} still pouring. Pass the stage anyway? They can keep pouring.`)) return;
+                    await eventAction(live.event.id, "advance", { drink_id: drink.id });
+                    toast("Take a bow 🎩");
+                  })
+                }
+                className="btn-gold mt-2 w-full rounded-full py-3 text-lg"
+              >
+                Done presenting
+              </button>
+            </>
+          }
+        />
+      ) : (
+        me && (
+          <BarTray
+            drinkId={drink.id}
+            comments={live.comments}
+            note={live.my_notes[drink.id] ?? ""}
+            top={<ReactionTray compact drinkId={drink.id} onLocal={(emoji) => setLocal((l) => [...l.slice(-20), { id: `local-${Date.now()}`, emoji }])} />}
+          />
+        )
+      )}
+      {mine && <PrepSheet drinkId={drink.id} open={prep} onClose={() => setPrep(false)} />}
       <RecipeSheet drinkId={drink.id} open={recipe} onClose={() => setRecipe(false)} />
     </div>
   );

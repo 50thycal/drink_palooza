@@ -43,11 +43,11 @@
   --color-neon-pink: var(--neon-pink);
   --color-neon-teal: var(--neon-teal);
   --color-neon-amber: var(--neon-amber);
-  --font-display: "Limelight", "Didot", serif;
-  --font-deco: "Poiret One", "Josefin Sans", sans-serif;
-  --font-body: "Josefin Sans", system-ui, sans-serif;
-  --font-neon: "Neonderthaw", "Brush Script MT", cursive;
-  --font-chalk: "Caveat", "Bradley Hand", cursive;
+  --font-display: var(--ff-display), "Didot", serif;
+  --font-deco: var(--ff-deco), var(--ff-body), sans-serif;
+  --font-body: var(--ff-body), system-ui, sans-serif;
+  --font-neon: var(--ff-neon), "Brush Script MT", cursive;
+  --font-chalk: var(--ff-chalk), "Bradley Hand", cursive;
 }
 
 html,

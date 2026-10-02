@@ -95,7 +95,7 @@ export function TableDiagram({
             <text y={0.075} textAnchor="middle" fontSize={0.22}>
               {c.member?.emoji ?? "?"}
             </text>
-            <text y={0.36} textAnchor="middle" fontSize={0.13} fill="#e9d7a5" fontFamily="Josefin Sans" fontWeight={700}>
+            <text y={0.36} textAnchor="middle" fontSize={0.13} fill="#e9d7a5" style={{ fontFamily: "var(--font-body)" }} fontWeight={700}>
               {me ? "you" : c.member?.name}
             </text>
           </g>

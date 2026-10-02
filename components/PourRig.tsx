@@ -140,8 +140,10 @@ export function PourRig({
 
       <svg
         viewBox="0 -170 200 430"
-        className="mx-auto block h-[min(46dvh,400px)] w-full"
-        style={{ cursor: "ns-resize" }}
+        className="mx-auto block w-full"
+        // Sized to what's left between the Now Serving header and the bar
+        // tray, so the glass, the pour button and Next all fit without a scroll.
+        style={{ cursor: "ns-resize", height: "clamp(190px, 100dvh - 590px, 400px)" }}
         aria-label={`${def.label} glass, ${shown ?? "not poured"}. Swipe up or down to adjust.`}
         onPointerDown={startSwipe}
         onPointerMove={moveSwipe}
@@ -167,7 +169,7 @@ export function PourRig({
               <g key={i}>
                 <line x1={182} x2={i % 9 === 0 || i === 4 ? 196 : 191} y1={y} y2={y} stroke={on ? "#f3d77a" : "rgba(212,175,55,0.35)"} strokeWidth={1.5} />
                 {(i === 0 || i === 4 || i === 9) && (
-                  <text x={199} y={y + 3.5} fontSize={9} fill="rgba(233,215,165,0.7)" textAnchor="end" fontFamily="Josefin Sans" transform={`translate(0 ${i === 9 ? 10 : i === 0 ? -6 : 0})`}>
+                  <text x={199} y={y + 3.5} fontSize={9} fill="rgba(233,215,165,0.7)" textAnchor="end" style={{ fontFamily: "var(--font-body)" }} transform={`translate(0 ${i === 9 ? 10 : i === 0 ? -6 : 0})`}>
                     {i + 1}
                   </text>
                 )}

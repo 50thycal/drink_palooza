@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useHome } from "@/lib/api";
 import { useMe } from "@/lib/me";
 import { useScene } from "@/lib/scene";
-import { Ctx, SHOW_SCENES, showScene, type AppCtx } from "./AppContext";
+import { Ctx, SHOW_SCENES, showScene, useApp, type AppCtx } from "./AppContext";
 import SceneStage from "./SceneStage";
 import { NapkinArrivals } from "./Seating";
 import { BarTop } from "./scenes/BarTop";
@@ -132,6 +132,7 @@ export default function App() {
 
   return (
     <Ctx.Provider value={ctx}>
+      <ShowRibbon hidden={!!callout || !me || SHOW_SCENES.includes(current.key)} onGo={() => target && go(target)} />
       <SceneStage scene={current}>{body}</SceneStage>
       <AnimatePresence>
         {callout && (
@@ -151,6 +152,51 @@ export default function App() {
       {me && <NapkinArrivals />}
       <Toaster />
     </Ctx.Provider>
+  );
+}
+
+const RIBBON_PX = 34;
+
+/**
+ * While the show is on and you've wandered off (the recipe book, the
+ * chalkboard, the bar), a thin neon strip keeps you in the loop and takes you
+ * back with a tap. Scenes shift down beneath it rather than being covered.
+ */
+function ShowRibbon({ hidden, onGo }: { hidden: boolean; onGo: () => void }) {
+  const { live, memberById, meId, joined } = useApp();
+  const status = live?.event.status;
+  let text: string | null = null;
+  if (!hidden && live && status === "live" && live.current) {
+    const raters = live.participants.length - 1;
+    const poured = live.scored_counts[live.current.id] ?? 0;
+    const mine = live.my_scores[live.current.id] ?? {};
+    const left = joined && live.current.member_id !== meId ? 4 - Object.keys(mine).length : 0;
+    text = `${memberById(live.current.member_id)?.name} is presenting · ${poured}/${raters} poured${left > 0 ? ` · ${left} glass${left === 1 ? "" : "es"} to go` : ""}`;
+  } else if (!hidden && status === "lastcall") {
+    text = "Last call · finish your pours before the reveal";
+  }
+  const visible = !!text;
+  useEffect(() => {
+    document.documentElement.style.setProperty("--ribbon", visible ? `${RIBBON_PX}px` : "0px");
+  }, [visible]);
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          key="ribbon"
+          onClick={onGo}
+          initial={{ y: -60 }}
+          animate={{ y: 0 }}
+          exit={{ y: -60 }}
+          className="fixed inset-x-0 top-0 z-40 flex items-end justify-center gap-2 border-b border-neon-pink/50 bg-black/90 px-3 pb-1.5 backdrop-blur"
+          style={{ height: `calc(${RIBBON_PX}px + env(safe-area-inset-top))` }}
+        >
+          <span className="pulse-dot mb-[5px] h-2 w-2 shrink-0 rounded-full bg-neon-pink shadow-[0_0_8px_var(--neon-pink)]" />
+          <span className="truncate font-deco text-[13px] font-bold tracking-wide text-champagne">{text}</span>
+          <span className="shrink-0 font-deco text-[13px] font-bold text-neon-pink">Back →</span>
+        </motion.button>
+      )}
+    </AnimatePresence>
   );
 }
 

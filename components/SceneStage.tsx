@@ -97,7 +97,7 @@ export default function SceneStage({ scene, children }: { scene: Scene; children
     lastKey.current = key;
   }
   return (
-    <div className="fixed inset-0 overflow-hidden bg-onyx" style={{ perspective: 1100 }}>
+    <div className="fixed inset-x-0 bottom-0 overflow-hidden bg-onyx transition-[top] duration-300" style={{ perspective: 1100, top: "var(--ribbon, 0px)" }}>
       <AnimatePresence initial={false} custom={move.current}>
         <motion.div
           key={key}

@@ -54,7 +54,7 @@ Same foundation as MovieTime.
 | Layer | Choice |
 |---|---|
 | Framework | Next.js 15 (App Router) + React 19 + TypeScript |
-| Styling | Tailwind CSS v4, Art Deco tokens in `app/globals.css`; fonts Limelight, Poiret One, Josefin Sans, Neonderthaw |
+| Styling | Tailwind CSS v4, Art Deco tokens in `app/globals.css`; fonts Limelight, Poiret One, Josefin Sans, Neonderthaw, Caveat (OFL, self-hosted in `app/fonts/` via `next/font/local`) |
 | Motion | `motion` (camera, sheets, reveals); all art is inline SVG |
 | Data | Postgres (Neon) via `@neondatabase/serverless`; the schema creates itself on first request |
 | Photos | Vercel Blob; falls back to Postgres if no Blob store is attached. Photos are resized on the phone to ≤1600px JPEG first. |
@@ -98,5 +98,5 @@ Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
 ```
 lib/        server.ts (rules) · scoring.ts (pure maths) · schema.ts · scene.ts (camera positions) · sounds.ts (Web Audio) · api.ts
 app/api/    thin routes; lifecycle moves are POST /api/events/:id/:action
-components/ App.tsx · SceneStage.tsx (camera) · PourRig.tsx · art/ (glasses, shaker, Mabel & Jasper, back bar) · scenes/
+components/ App.tsx (+ Now Serving ribbon) · SceneStage.tsx (camera) · PourRig.tsx · BarTray.tsx · art/ (glasses, shaker, Mabel & Jasper, back bar) · scenes/
 ```

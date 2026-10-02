@@ -187,9 +187,23 @@ whole numbers. Drag the glass level to fine-tune.
 | **Creativity** | **The Wild Card**: a curvy hurricane glass, emerald, a paper umbrella | Unexpected |
 | **Presentation** | **The Showstopper**: a champagne flute, rising gold bubbles | **A sparkler ignites at 10** |
 
-Under the glasses: an emoji tray (reactions float up on every phone), a
-cocktail-napkin comment box, a private notepad, a photo button, and a "view
-the recipe" card.
+Docked at the bottom: the **bar tray**, a rubber bar mat that stays put while
+the glass gets the rest of the screen. Its top row is the emoji reactions
+(they float up on every phone); under that, napkins (comments), a private
+notepad, a photo button and the chalkboard. The glass is sized to whatever
+height is left, so pouring, adjusting and Next never need a scroll. The
+presenter's stage uses the same tray with the soundboard and "Done
+presenting" on top and the recipe editor in place of notes.
+
+**Now Serving ribbon.** Anyone who wanders off mid-show (the bar, the book,
+the hall) gets a thin neon ribbon pinned to the top of the screen: who's
+presenting, how many have poured, how many of your glasses are left. Tap it
+to go straight back.
+
+**Lobby stools.** Under the palooza name in the lobby, every participant
+sits on a bar stool with a recipe pip and a photo pip, plus "N of M ready"
+and whether the table's been seated. After your first visit the bartenders
+shrink to a compact strip so the menu is in reach (tap them to grow back).
 
 **The Soundboard (presenter only).** Five sounds synthesized in the browser
 with Web Audio (no audio files, no licensing):
@@ -217,7 +231,7 @@ a matching emoji to the reaction stream, so everyone sees it.
 | Oxblood | `#6d1f2a` | Accents |
 | Neon pink / teal / amber | `#ff4fa3` / `#3ff2e0` / `#ffb547` | Neon signs (glow via layered text-shadow) |
 
-- **Fonts:** *Limelight* (display), *Poiret One* (deco labels), *Josefin Sans* (body), *Neonderthaw* (neon signs).
+- **Fonts:** *Limelight* (display), *Poiret One* (deco labels), *Josefin Sans* (body), *Neonderthaw* (neon signs), *Caveat* (chalk). All OFL, self-hosted from `app/fonts/` via `next/font/local`, so there's no flash of fallback fonts on a slow bar Wi-Fi.
 - **Motifs:** sunburst fans, stepped chevrons, double-rule gold frames, a keystone diamond on dividers.
 
 ### Technical approach

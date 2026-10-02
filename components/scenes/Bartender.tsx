@@ -16,6 +16,8 @@ import { Avatar, BackPlaque, DecoDivider, toast, useBusy } from "../ui";
 
 type Speaker = "mabel" | "jasper";
 
+const MET_KEY = "drinkpalooza:met-bartenders";
+
 /**
  * Eye level with the bartenders. Whatever you need to do before or around
  * the show, you ask them: who you are, joining, the running order, your
@@ -27,18 +29,36 @@ export function BartenderScene() {
   const [speaker] = useState<Speaker>(() => (Math.random() < 0.5 ? "mabel" : "jasper"));
   const { data: memory } = useMemory();
   const line = useLine(speaker, memory?.wins ?? {});
+  // You meet the bartenders properly once per phone; after that they step
+  // back so the menu sits higher. Tap them to bring the full view back.
+  const [compact, setCompact] = useState(() => {
+    try {
+      return window.localStorage.getItem(MET_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    if (!me) return;
+    try {
+      window.localStorage.setItem(MET_KEY, "1");
+    } catch {}
+  }, [me]);
 
   return (
     <div className="relative min-h-full bg-onyx pb-16">
       {me && <BackPlaque onClick={back} />}
 
       {/* The back bar, the bartenders, the counter */}
-      <div className="relative h-[50dvh] min-h-[330px] overflow-hidden">
+      <div
+        onClick={() => me && setCompact((c) => !c)}
+        className={`relative overflow-hidden transition-[height] duration-500 ${compact && me ? "h-[270px]" : "h-[50dvh] min-h-[330px]"}`}
+      >
         <div className="absolute inset-0">
           <BackBar />
         </div>
         <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_70%,rgba(255,181,71,0.2),transparent_70%)]" />
-        <div className="absolute inset-x-0 bottom-[34px] flex h-[min(62%,300px)] items-end justify-center">
+        <div className={`absolute inset-x-0 bottom-[34px] flex items-end justify-center ${compact && me ? "h-[124px]" : "h-[min(62%,300px)]"}`}>
           <motion.div
             className="relative h-full"
             style={{ zIndex: speaker === "mabel" ? 2 : 1, filter: speaker === "mabel" ? "none" : "brightness(0.55)" }}
@@ -269,6 +289,7 @@ function EventMenu({ live }: { live: LiveEvent }) {
   return (
     <div>
       <MenuHeading sub={event.status === "lobby" ? "Now seating" : event.status === "live" ? "Now serving" : undefined}>{event.name}</MenuHeading>
+      {event.status === "lobby" && <Stools live={live} />}
 
       <div className="space-y-2.5">
         {!joined && (event.status === "lobby" || event.status === "live") && (
@@ -451,6 +472,61 @@ function LineUp({ live }: { live: LiveEvent }) {
           })}
         </AnimatePresence>
       </ol>
+    </div>
+  );
+}
+
+// ---- Who's ready ----------------------------------------------------------------
+
+/**
+ * A row of bar stools, one per person, in seat order. Each shows whether
+ * they've written up their recipe and added a photo of the drink, so the
+ * host can see at a glance who's still prepping before starting the show.
+ */
+function Stools({ live }: { live: LiveEvent }) {
+  const { memberById, meId } = useApp();
+  const people = [...live.participants].sort((a, b) => (a.seat ?? 99) - (b.seat ?? 99));
+  const status = (id: string) => {
+    const d = live.drinks.find((x) => x.member_id === id);
+    return { recipe: !!d?.has_recipe, photo: !!d?.hero_url, name: d?.name ?? "" };
+  };
+  const ready = people.filter((p) => {
+    const s = status(p.member_id);
+    return s.recipe && s.photo;
+  }).length;
+  return (
+    <div className="mb-4">
+      <div className="mb-2 flex items-center justify-between font-deco text-[11px] font-bold tracking-widest">
+        <span>
+          {ready} OF {people.length} READY
+        </span>
+        <span className={live.event.seating_set ? "" : "opacity-60"}>🪑 {live.event.seating_set ? "TABLE SEATED ✓" : "SEATS NOT SET"}</span>
+      </div>
+      <div className="flex flex-wrap justify-center gap-x-1 gap-y-3">
+        {people.map((p) => {
+          const m = memberById(p.member_id);
+          const s = status(p.member_id);
+          const done = s.recipe && s.photo;
+          return (
+            <div key={p.member_id} className="flex w-[62px] flex-col items-center">
+              <div className={`rounded-full ${done ? "ring-2 ring-emerald-2 ring-offset-2 ring-offset-cream" : ""}`}>
+                <Avatar member={m} size={38} />
+              </div>
+              {/* the stool */}
+              <svg viewBox="0 0 40 30" className="-mt-1 w-10" aria-hidden>
+                <ellipse cx="20" cy="5" rx="15" ry="4" fill="#6d1f2a" stroke="#2b1d12" strokeWidth="1.2" />
+                <path d="M9,7 L6,29 M31,7 L34,29 M14,8 L13,29 M26,8 L27,29" stroke="#2b1d12" strokeWidth="1.6" />
+                <path d="M7.5,19 L32.5,19" stroke="#8c6d1f" strokeWidth="1.6" />
+              </svg>
+              <span className="mt-0.5 max-w-full truncate font-display text-[13px] leading-tight">{p.member_id === meId ? "You" : m?.name}</span>
+              <span className="text-[13px] leading-none" title={`${s.recipe ? "Recipe written" : "No recipe yet"} · ${s.photo ? "Photo added" : "No photo yet"}`}>
+                <span className={s.recipe ? "" : "opacity-25 grayscale"}>📝</span>
+                <span className={s.photo ? "" : "opacity-25 grayscale"}>📷</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

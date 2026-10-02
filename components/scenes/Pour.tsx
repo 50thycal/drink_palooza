@@ -7,9 +7,9 @@ import { refreshAll, send, useDrink } from "@/lib/api";
 import type { Comment, Drink, ScoreMap } from "@/lib/types";
 import { useApp } from "../AppContext";
 import { GlassIcon } from "../art/Glass";
-import { PhotoButton, PhotoStrip, RecipeCard } from "../Drink";
+import { BarTray } from "../BarTray";
+import { PhotoStrip, RecipeCard } from "../Drink";
 import { PourRig } from "../PourRig";
-import { ChalkboardSheet } from "../Chalkboard";
 import { PassNapkin } from "../Seating";
 import { Avatar, BackPlaque, FloatingReactions, Neon, Sheet, toast } from "../ui";
 
@@ -35,19 +35,19 @@ export function PourScene() {
   }
 
   return (
-    <div className="wood relative min-h-full pb-[max(2rem,env(safe-area-inset-bottom))]">
+    <div className="wood relative flex min-h-full flex-col">
       <BackPlaque onClick={back} />
       <FloatingReactions reactions={live.reactions} me={meId} local={local} />
       <NowServing drink={drink} presenterName={presenter?.name ?? ""} />
       <Glasses key={drink.id} drinkId={drink.id} mine={live.my_scores[drink.id] ?? {}} />
       <WaitingOn ids={live.waiting_on} />
-      <ReactionTray drinkId={drink.id} onLocal={(emoji) => setLocal((l) => [...l.slice(-20), { id: `local-${Date.now()}-${Math.random()}`, emoji }])} />
-      <Napkins drinkId={drink.id} comments={live.comments} />
-      <div className="mx-4 mt-4 grid grid-cols-2 gap-2">
-        <NotesButton drinkId={drink.id} initial={live.my_notes[drink.id] ?? ""} />
-        <PhotoButton drinkId={drink.id} label="Photo" dark />
-      </div>
-      <ChalkButton />
+      <div className="flex-1" />
+      <BarTray
+        drinkId={drink.id}
+        comments={live.comments}
+        note={live.my_notes[drink.id] ?? ""}
+        top={<ReactionTray compact drinkId={drink.id} onLocal={(emoji) => setLocal((l) => [...l.slice(-20), { id: `local-${Date.now()}-${Math.random()}`, emoji }])} />}
+      />
     </div>
   );
 }
@@ -134,8 +134,6 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
     }
   }
 
-  const done = CATEGORIES.filter((c) => scores[c.key] != null).length;
-
   return (
     <div className="px-3 pt-3">
       {/* mini glasses as tabs */}
@@ -183,9 +181,6 @@ export function Glasses({ drinkId, mine, disabled = false }: { drinkId: string; 
           </motion.div>
         </AnimatePresence>
       </div>
-      <div className="mt-2 text-center font-deco text-sm font-bold tracking-widest text-champagne/70">
-        {done === CATEGORIES.length ? "✓ ALL FOUR POURED — CHANGE THEM UNTIL THE REVEAL" : `${done} OF ${CATEGORIES.length} GLASSES POURED`}
-      </div>
     </div>
   );
 }
@@ -209,24 +204,11 @@ function NextGlass({ index, scores, onGo }: { index: number; scores: ScoreMap; o
   );
 }
 
-/** The chalkboard, from anywhere in the game. */
-export function ChalkButton() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button onClick={() => setOpen(true)} className="chalk mx-auto mt-3 block rounded-full border border-white/30 bg-[#1f2622] px-5 py-1.5 text-xl text-[#f2efe6]">
-        🖍 The chalkboard
-      </button>
-      <ChalkboardSheet open={open} onClose={() => setOpen(false)} />
-    </>
-  );
-}
-
 function WaitingOn({ ids }: { ids: string[] }) {
   const { memberById } = useApp();
-  if (!ids.length) return <div className="mt-3 text-center font-deco text-xs font-bold tracking-widest text-neon-teal/80">EVERYONE HAS POURED</div>;
+  if (!ids.length) return <div className="mt-2 text-center font-deco text-xs font-bold tracking-widest text-neon-teal/80">EVERYONE HAS POURED</div>;
   return (
-    <div className="mt-3 flex items-center justify-center gap-1.5 px-4">
+    <div className="mt-2 flex items-center justify-center gap-1.5 px-4">
       <span className="font-deco text-xs font-bold tracking-widest text-champagne/60">STILL POURING</span>
       {ids.map((id) => (
         <Avatar key={id} member={memberById(id)} size={24} />
@@ -235,9 +217,9 @@ function WaitingOn({ ids }: { ids: string[] }) {
   );
 }
 
-export function ReactionTray({ drinkId, onLocal }: { drinkId: string; onLocal: (emoji: string) => void }) {
+export function ReactionTray({ drinkId, onLocal, compact = false }: { drinkId: string; onLocal: (emoji: string) => void; compact?: boolean }) {
   return (
-    <div className="mx-3 mt-4 flex justify-between rounded-full border border-gold/40 bg-black/45 px-2 py-1.5">
+    <div className={compact ? "flex justify-between px-1" : "mx-3 mt-4 flex justify-between rounded-full border border-gold/40 bg-black/45 px-2 py-1.5"}>
       {REACTIONS.map((e) => (
         <motion.button
           key={e}
@@ -336,8 +318,7 @@ export function Napkins({ drinkId, comments }: { drinkId: string; comments: Comm
 }
 
 /** Private tasting notes: only this person ever sees them. */
-export function NotesButton({ drinkId, initial }: { drinkId: string; initial: string }) {
-  const [open, setOpen] = useState(false);
+export function NotesSheet({ drinkId, initial, open, onClose }: { drinkId: string; initial: string; open: boolean; onClose: () => void }) {
   const [text, setText] = useState(initial);
   useEffect(() => {
     if (!open) setText(initial);
@@ -346,30 +327,37 @@ export function NotesButton({ drinkId, initial }: { drinkId: string; initial: st
     try {
       await send("PUT", `/api/drinks/${drinkId}/notes`, { text });
       await refreshAll();
-      setOpen(false);
+      onClose();
     } catch (err) {
       toast((err as Error).message);
     }
   };
   return (
+    <Sheet open={open} onClose={onClose} title="Tasting Notes">
+      <p className="mb-2 font-deco text-xs font-bold tracking-widest opacity-70">ONLY YOU CAN SEE THESE</p>
+      <textarea
+        value={text}
+        maxLength={1000}
+        rows={6}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Smoky, a touch too sweet, killer garnish…"
+        className="w-full rounded-sm border border-ink/30 bg-white/60 px-3 py-2 text-[16px] text-ink outline-none focus:border-ink"
+      />
+      <button onClick={save} className="btn-gold mt-3 mb-2 w-full rounded-full py-3">
+        Save notes
+      </button>
+    </Sheet>
+  );
+}
+
+export function NotesButton({ drinkId, initial }: { drinkId: string; initial: string }) {
+  const [open, setOpen] = useState(false);
+  return (
     <>
       <button onClick={() => setOpen(true)} className="btn-ghost rounded-full bg-black/40 px-3 py-2 text-sm">
         🔒 {initial ? "My notes ✓" : "My notes"}
       </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Tasting Notes">
-        <p className="mb-2 font-deco text-xs font-bold tracking-widest opacity-70">ONLY YOU CAN SEE THESE</p>
-        <textarea
-          value={text}
-          maxLength={1000}
-          rows={6}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Smoky, a touch too sweet, killer garnish…"
-          className="w-full rounded-sm border border-ink/30 bg-white/60 px-3 py-2 text-[16px] text-ink outline-none focus:border-ink"
-        />
-        <button onClick={save} className="btn-gold mt-3 mb-2 w-full rounded-full py-3">
-          Save notes
-        </button>
-      </Sheet>
+      <NotesSheet drinkId={drinkId} initial={initial} open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
