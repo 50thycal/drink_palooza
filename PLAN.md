@@ -164,6 +164,19 @@ Tapping a coaster drives the camera there.
 
 Painted-poster style: gradients for skin, hair and fabric rather than flat fills. `portrait` crops the same drawing to the head for the in-game cameo.
 
+**Drawn to real proportions.** Built on classic figure-drawing landmarks (Loomis):
+- shoulders about 2 heads wide for her and about 2⅓ for him
+- upper arm about 1.5 heads, forearm about 1, hand about ¾ of a head
+- elbows hanging at the waist
+- the shaker and the coupe sized to the real things (~30 cm tin, ~11 cm bowl)
+
+**Behind the bar, not floating.** Both drawings share one frame (`VIEW_W`, `VIEW_H`) with the bar top at waist height (`BAR_Y`). The scene stacks them in three slices:
+1. their bodies
+2. the counter: polished top, brass edge, panelled front, its top edge at their waists
+3. anything resting *on* the bar (Mabel's gloved forearm and hand), drawn again over the counter
+
+The top of the stage is kept clear for the speech bubble, so it never covers a face.
+
 **They talk.** `lib/banter.ts` writes their lines from the live state:
 - *At the bar* they hold a running conversation: the line you need first (join up, write your recipe, snap a photo), then back-and-forths that call people out by name ("Still no recipe from Zoe." / "Zoe, it's a cocktail, not a novel."), headcount jokes, champion ribbing, and a stock of we're-going-to-drink-too-much gags. Tap the bubble to move them on.
 - *During the game* one of them leans into frame with a short remark: a new presenter ("Mezcal? Bold choice, Cal."), your own pour once it settles (a 1 or a 10 always gets one), someone finishing, the last straggler by name, every glass in, a flurry of reactions, a napkin, or idle chatter if it goes quiet. At most one every 9 seconds, so they season the game rather than narrate it.

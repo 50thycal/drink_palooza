@@ -4,13 +4,29 @@ import { useId } from "react";
 
 /**
  * Mabel and Jasper, the house bartenders. Painted-poster style: soft
- * gradients for skin and fabric, gold linework for the Deco trim. viewBox
- * 0 0 200 250; the bar counter is drawn by the scene in front of them, so
- * below ~y=215 is mostly hidden.
+ * gradients for skin and fabric, gold linework for the Deco trim.
+ *
+ * Built on figure-drawing proportions (Loomis): shoulders about two heads
+ * wide (a little more for him), upper arm about 1.5 heads, forearm about
+ * one, hands three-quarters of a head, and elbows hanging at the waist,
+ * which is where a bar top meets a standing bartender.
  *
  * `portrait` crops the same drawing to head and shoulders for the little
  * cameo that pops up during the game.
  */
+
+/** Both drawings share one frame so they line up behind one bar. */
+export const VIEW_W = 240;
+export const VIEW_H = 290;
+/** Where the bar top meets them: waist height, about where elbows hang. */
+export const BAR_Y = 262;
+const VIEWBOX = `-20 0 ${VIEW_W} ${VIEW_H}`;
+
+/**
+ * "body" is everything behind the counter; "front" is whatever rests on the
+ * bar top (drawn again over the counter so hands sit on it, not behind it).
+ */
+export type Layer = "all" | "body" | "front";
 
 /** Gradient ids must be unique per drawing: there can be several on screen. */
 function useIds() {
@@ -27,12 +43,12 @@ function along(n: number, [x0, y0]: number[], [cx, cy]: number[], [x1, y1]: numb
   });
 }
 
-export function Mabel({ shaking = false, portrait = false }: { shaking?: boolean; portrait?: boolean }) {
+export function Mabel({ shaking = false, portrait = false, layer = "all" }: { shaking?: boolean; portrait?: boolean; layer?: Layer }) {
   const id = useIds();
   const url = (n: string) => `url(#${id(n)})`;
   const ink = "#3a2416";
   return (
-    <svg viewBox={portrait ? "60 14 82 82" : "0 0 200 250"} className="h-full w-auto" aria-label="Mabel, the flapper bartender">
+    <svg viewBox={portrait ? "60 14 82 82" : VIEWBOX} className="h-full w-auto" aria-label="Mabel, the flapper bartender">
       <defs>
         <radialGradient id={id("face")} cx="0.46" cy="0.42" r="0.62">
           <stop offset="0" stopColor="#fff1e6" />
@@ -58,6 +74,11 @@ export function Mabel({ shaking = false, portrait = false }: { shaking?: boolean
           <stop offset="0" stopColor="#082b25" />
           <stop offset="0.5" stopColor="#156352" />
           <stop offset="1" stopColor="#082b25" />
+        </linearGradient>
+        <linearGradient id={id("arm")} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#d9a689" />
+          <stop offset="0.45" stopColor="#f8dcc8" />
+          <stop offset="1" stopColor="#d29f82" />
         </linearGradient>
         <linearGradient id={id("glove")} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#050505" />
@@ -90,71 +111,63 @@ export function Mabel({ shaking = false, portrait = false }: { shaking?: boolean
         </linearGradient>
       </defs>
 
+      {layer !== "front" && (
+        <>
       {/* the back of the bob */}
       <path d="M62,76 C58,40 80,19 102,19 C127,19 145,40 141,78 C140,96 134,108 124,113 L78,113 C68,108 62,96 62,76 Z" fill={url("hairBack")} />
 
-      {/* neck and shoulders */}
-      <path d="M90,92 L110,92 L112,126 L88,126 Z" fill={url("body")} />
-      <path d="M90,96 C95,103 105,103 110,96 L110,104 C105,108 95,108 90,104 Z" fill="#c99478" opacity={0.45} />
-      <path d="M64,168 C62,148 68,136 80,130 C88,126 94,125 100,125 C106,125 112,126 120,130 C132,136 138,148 136,168 Z" fill={url("body")} />
+      {/* neck: real width, shadow under the jaw */}
+      <path d="M87,90 L113,90 L116,130 L84,130 Z" fill={url("body")} />
+      <path d="M87,94 C94,104 106,104 113,94 L113,107 C106,113 94,113 87,107 Z" fill="#c99478" opacity={0.45} />
+
+      {/* shoulders and chest: a woman's shoulders are about two heads wide */}
+      <path d="M100,120 C92,120 86,123 80,127 C68,133 54,137 45,143 C36,150 32,160 32,174 L60,186 L140,186 L168,174 C168,160 164,150 155,143 C146,137 132,133 120,127 C114,123 108,120 100,120 Z" fill={url("body")} />
       <g fill="none" stroke="#c9937a" strokeLinecap="round" opacity={0.55}>
-        <path d="M80,134 Q89,138 96,135" strokeWidth={1.1} />
-        <path d="M120,134 Q111,138 104,135" strokeWidth={1.1} />
+        <path d="M64,137 C74,139 86,141 96,140" strokeWidth={1.2} />
+        <path d="M136,137 C126,139 114,141 104,140" strokeWidth={1.2} />
+        <path d="M100,146 L100,154" strokeWidth={0.8} />
       </g>
 
-      {/* drop-waist beaded dress */}
-      <path d="M68,250 C66,212 66,174 69,150 L78,132 L87,133 C91,148 95,157 100,160 C105,157 109,148 113,133 L122,132 L131,150 C134,174 134,212 132,250 Z" fill={url("dress")} />
-      <path d="M78,132 C86,140 93,154 100,160 C107,154 114,140 122,132" fill="none" stroke="#e8c45c" strokeWidth={1.6} />
-      {/* sequin shimmer */}
+      {/* sleeveless beaded dress, straight 1920s cut */}
+      <path d="M50,300 L50,184 C50,170 54,158 60,150 L70,138 L80,138 C86,156 92,170 100,178 C108,170 114,156 120,138 L130,138 L140,150 C146,158 150,170 150,184 L150,300 Z" fill={url("dress")} />
+      <path d="M80,138 C86,156 92,170 100,178 C108,170 114,156 120,138" fill="none" stroke="#e8c45c" strokeWidth={1.6} />
+      <path d="M70,138 L80,138 M120,138 L130,138" stroke="#e8c45c" strokeWidth={1.2} />
       <g fill="#7fe0c8" opacity={0.35}>
-        {Array.from({ length: 54 }, (_, i) => {
-          const col = i % 9;
-          const row = Math.floor(i / 9);
-          const x = 72 + col * 7 + (row % 2) * 3.5;
-          const y = 166 + row * 7;
-          return <circle key={i} cx={x} cy={y} r={0.9} />;
+        {Array.from({ length: 84 }, (_, i) => {
+          const col = i % 12;
+          const row = Math.floor(i / 12);
+          return <circle key={i} cx={56 + col * 8 + (row % 2) * 4} cy={190 + row * 10} r={0.9} />;
         })}
       </g>
-      {/* Deco beadwork: chevrons and a fan at the hip */}
       <g fill="none" stroke="#e8c45c" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M72,176 L86,168 L100,176 L114,168 L128,176" strokeWidth={1.4} />
-        <path d="M71,184 L86,176 L100,184 L114,176 L129,184" strokeWidth={1} opacity={0.7} />
-        <path d="M68,204 L132,204" strokeWidth={2.4} />
-        <path d="M68,209 L132,209" strokeWidth={1} />
-        {[-56, -38, -19, 0, 19, 38, 56].map((a) => (
-          <line key={a} x1={100} y1={240} x2={100 + Math.sin((a * Math.PI) / 180) * 30} y2={240 - Math.cos((a * Math.PI) / 180) * 30} strokeWidth={1} opacity={0.85} />
+        <path d="M54,200 L70,190 L85,200 L100,190 L115,200 L130,190 L146,200" strokeWidth={1.4} />
+        <path d="M53,210 L70,200 L85,210 L100,200 L115,210 L130,200 L147,210" strokeWidth={1} opacity={0.7} />
+        {[-60, -40, -20, 0, 20, 40, 60].map((a) => (
+          <line key={a} x1={100} y1={262} x2={100 + Math.sin((a * Math.PI) / 180) * 34} y2={262 - Math.cos((a * Math.PI) / 180) * 34} strokeWidth={1} opacity={0.85} />
         ))}
-        <path d="M76,240 A24,24 0 0 1 124,240" strokeWidth={1.2} />
+        <path d="M70,262 A30,30 0 0 1 130,262" strokeWidth={1.3} />
       </g>
-      {/* fringe */}
-      <g stroke="#0d4a3e" strokeWidth={1.2}>
-        {Array.from({ length: 32 }, (_, i) => (
-          <line key={i} x1={69 + i * 2} y1={210} x2={68.5 + i * 2 + Math.sin(i) * 0.8} y2={226} />
-        ))}
-      </g>
+      {/* a slight shadow where the arms meet the body */}
+      <path d="M56,182 C54,210 54,236 54,262" stroke="#04140f" strokeWidth={4} opacity={0.5} fill="none" />
+      <path d="M144,182 C146,210 146,236 146,262" stroke="#04140f" strokeWidth={4} opacity={0.5} fill="none" />
 
-      {/* resting arm: bare shoulder into a black satin opera glove, hand on the bar */}
-      <path d="M68,134 C58,140 54,156 54,172 C54,182 55,190 58,196 L70,192 C68,182 68,170 70,158 C71,150 72,142 72,137 Z" fill={url("body")} />
-      <path d="M66,140 C60,148 58,160 58,170" fill="none" stroke="#c9937a" strokeWidth={1} opacity={0.5} />
-      <path d="M54,170 C53,184 55,194 60,202 C66,212 76,222 88,228 L95,218 C84,212 76,204 72,195 C69,187 69,178 70,170 Z" fill={url("glove")} />
-      <path d="M54,170 Q62,166 70,170" fill="none" stroke="#3a3a40" strokeWidth={1.3} />
-      <path d="M58,184 C61,198 70,210 84,220" fill="none" stroke="#77777e" strokeWidth={1} opacity={0.6} />
-      <path d="M86,216 C92,214 98,218 98,224 C98,229 92,231 88,229 Z" fill="#0b0b0c" />
-      <g>
-        <ellipse cx={84} cy={222} rx={7.4} ry={3.8} transform="rotate(34 84 222)" fill="none" stroke="#e8c45c" strokeWidth={2.6} />
-        <ellipse cx={80} cy={218} rx={7.4} ry={3.8} transform="rotate(34 80 218)" fill="none" stroke="#b8902f" strokeWidth={1.6} />
-      </g>
+      {/* pearls: a choker strand and a long knotted rope */}
+      {along(17, [87, 128], [100, 156], [113, 128]).map(([x, y], i) => (
+        <circle key={`s${i}`} cx={x} cy={y} r={2} fill="#fffaf0" stroke="#c9bd9e" strokeWidth={0.4} />
+      ))}
+      {along(36, [84, 128], [100, 326], [116, 128]).map(([x, y], i) => (
+        <circle key={`l${i}`} cx={x} cy={y} r={2.3} fill="#fffaf0" stroke="#c9bd9e" strokeWidth={0.4} />
+      ))}
+      {along(7, [100, 226], [95, 238], [92, 252]).map(([x, y], i) => (
+        <circle key={`t${i}`} cx={x} cy={y} r={2.1} fill="#fffaf0" stroke="#c9bd9e" strokeWidth={0.4} />
+      ))}
 
-      {/* pearls: a short strand and a long knotted rope */}
-      {along(15, [88, 127], [100, 146], [112, 127]).map(([x, y], i) => (
-        <circle key={`s${i}`} cx={x} cy={y} r={1.9} fill="#fffaf0" stroke="#c9bd9e" strokeWidth={0.4} />
-      ))}
-      {along(26, [86, 126], [100, 214], [114, 126]).map(([x, y], i) => (
-        <circle key={`l${i}`} cx={x} cy={y} r={2.2} fill="#fffaf0" stroke="#c9bd9e" strokeWidth={0.4} />
-      ))}
-      {along(6, [100, 170], [96, 180], [94, 192]).map(([x, y], i) => (
-        <circle key={`t${i}`} cx={x} cy={y} r={2} fill="#fffaf0" stroke="#c9bd9e" strokeWidth={0.4} />
-      ))}
+      {/* her right arm hangs to the bar: upper arm ~1.4 heads, opera glove from mid-arm */}
+      <path d="M45,142 C34,146 28,158 28,174 C28,186 29,198 30,208 L56,208 C56,196 57,186 57,178 C57,162 53,150 45,142 Z" fill={url("arm")} />
+      <path d="M36,150 C32,160 31,172 32,184" fill="none" stroke="#fff3ea" strokeWidth={1.4} opacity={0.6} />
+      <path d="M30,204 C30,222 31,240 33,258 L57,260 C56,242 56,222 56,204 Z" fill={url("glove")} />
+      <path d="M30,205 Q43,199 56,205" fill="none" stroke="#3a3a40" strokeWidth={1.3} />
+      <path d="M35,212 C35,228 36,244 38,256" fill="none" stroke="#77777e" strokeWidth={1.1} opacity={0.6} />
 
       {/* face */}
       <path d="M77,64 C77,42 88,33 100,33 C112,33 123,42 123,64 C123,82 115,97 100,100 C85,97 77,82 77,64 Z" fill={url("face")} />
@@ -250,38 +263,55 @@ export function Mabel({ shaking = false, portrait = false }: { shaking?: boolean
         <line x1={122.5} y1={55.6} x2={123.6} y2={61} />
       </g>
 
-      {/* the shaking arm: bare shoulder, gloved from above the elbow, cobbler shaker in hand */}
-      <g style={shaking ? { animation: "shake-it 0.5s ease-in-out infinite", transformOrigin: "160px 124px", transformBox: "view-box" } : undefined}>
-        <path d="M128,132 C138,128 150,128 160,132 L164,146 C152,146 140,146 132,146 Z" fill={url("body")} />
-        <path d="M134,134 C142,132 150,132 156,134" fill="none" stroke="#c9937a" strokeWidth={1} opacity={0.5} />
-        {/* glove: upper arm to elbow, forearm rising to the hand */}
-        <path d="M150,130 C158,128 166,130 170,136 C173,142 170,148 164,148 C158,148 152,146 150,144 Z" fill={url("glove")} />
-        <path d="M160,132 C166,124 166,112 162,100 C160,94 158,90 156,88 L148,92 C150,98 152,106 153,114 C153,122 152,128 150,132 Z" fill={url("glove")} />
-        <path d="M150,131 L151,145" stroke="#3a3a40" strokeWidth={1.3} />
-        <path d="M162,128 C164,118 162,108 158,98" fill="none" stroke="#77777e" strokeWidth={1.1} opacity={0.7} />
-        <ellipse cx={155} cy={100} rx={6.4} ry={2.8} transform="rotate(-16 155 100)" fill="none" stroke="#e8c45c" strokeWidth={2.2} />
-        <g transform="rotate(-14 156 62)">
-          <path d="M145,92 L167,92 L163.5,52 L148.5,52 Z" fill={url("steel")} stroke="#56534d" strokeWidth={0.9} />
-          <path d="M148.5,52 L163.5,52 L160,41 L152,41 Z" fill={url("steel")} stroke="#56534d" strokeWidth={0.9} />
-          <rect x={152.5} y={34} width={7} height={8} rx={2.4} fill="#e8c45c" stroke="#9c7531" strokeWidth={0.6} />
-          <rect x={146.4} y={64} width={19.2} height={3.4} fill="#e8c45c" />
-          <rect x={148} y={52} width={16} height={2} fill="#8d8a84" />
-          <path d="M150.5,56 L149,90" stroke="#fff" strokeWidth={1.4} opacity={0.7} />
-          {/* fingers wrapped round the tin */}
-          <path d="M143,78 C139,78 139,90 144,90 L167,90 C171,90 171,78 167,78 Z" fill="#0b0b0c" />
-          <path d="M144,82 L167,82 M144,86 L167,86" stroke="#34343a" strokeWidth={0.8} />
-          <path d="M146,79 C150,78.4 160,78.4 165,79" stroke="#5a5a62" strokeWidth={0.8} fill="none" />
+
+      {/* her left arm: elbow down at her side, forearm up, shaking at shoulder height */}
+      <g style={shaking ? { animation: "shake-it 0.5s ease-in-out infinite", transformOrigin: "182px 246px", transformBox: "view-box" } : undefined}>
+        <path d="M146,152 C147,142 165,139 171,147 C176,163 179,179 181,195 L159,201 C155,186 150,170 146,152 Z" fill={url("arm")} />
+        <path d="M167,150 C172,164 175,178 177,190" fill="none" stroke="#fff3ea" strokeWidth={1.4} opacity={0.6} />
+        <path d="M159,200 L181,194 C185,211 189,228 192,243 C192,252 184,257 176,254 L172,249 C168,232 163,216 159,200 Z" fill={url("glove")} />
+        <path d="M159,201 Q170,194 181,195" fill="none" stroke="#3a3a40" strokeWidth={1.3} />
+        {/* forearm, in front of the upper arm */}
+        <path d="M171,249 C168,224 165,196 164,170 L180,167 C183,192 189,218 195,240 C195,252 179,257 171,249 Z" fill={url("glove")} />
+        <path d="M188,232 C185,214 182,196 180,176" fill="none" stroke="#77777e" strokeWidth={1.2} opacity={0.7} />
+        <ellipse cx={172} cy={172} rx={9.5} ry={3.6} transform="rotate(-8 172 172)" fill="none" stroke="#e8c45c" strokeWidth={2.4} />
+        {/* cobbler shaker: ~30 cm of steel, gripped round the tin */}
+        <g transform="rotate(-8 172 150)">
+          <path d="M157,170 L187,170 L184,118 L160,118 Z" fill={url("steel")} stroke="#56534d" strokeWidth={0.9} />
+          <path d="M160,118 L184,118 L178,106 L166,106 Z" fill={url("steel")} stroke="#56534d" strokeWidth={0.9} />
+          <path d="M166,106 L178,106 L176,93 L168,93 Z" fill={url("steel")} stroke="#56534d" strokeWidth={0.9} />
+          <rect x={166.5} y={84} width={11} height={10} rx={3} fill="#e8c45c" stroke="#9c7531" strokeWidth={0.6} />
+          <rect x={158.6} y={128} width={27} height={3.6} fill="#e8c45c" />
+          <path d="M163,122 L161,168" stroke="#fff" strokeWidth={1.8} opacity={0.7} />
+          {/* gloved hand: four fingers wrapped round, thumb over the front */}
+          <path d="M155,146 C153,138 158,134 166,134 L180,134 C188,134 191,140 190,148 C189,158 186,166 178,167 L164,167 C157,166 155,156 155,146 Z" fill="#0b0b0c" />
+          <path d="M156,143 L190,143 M156,151 L190,151 M157,159 L188,159" stroke="#2c2c31" strokeWidth={1} />
+          <path d="M158,136 C166,132 176,132 186,137 C182,142 172,144 160,141 Z" fill="#1b1b1f" />
+          <path d="M160,137 C168,134.6 176,134.6 184,137.4" fill="none" stroke="#5a5a62" strokeWidth={0.9} />
         </g>
       </g>
+        </>
+      )}
+      {layer !== "body" && !portrait && (
+        <>
+      {/* on the bar top, in front of the counter's edge: forearm laid along the bar, hand flat */}
+      <path d="M30,256 C34,250 50,250 58,254 C68,258 80,260 90,260 L92,272 C76,272 58,272 44,270 C32,268 26,262 30,256 Z" fill={url("glove")} />
+      <path d="M40,258 C54,260 70,264 88,264" fill="none" stroke="#77777e" strokeWidth={1.1} opacity={0.6} />
+      <path d="M86,258 C94,254 108,254 116,258 C121,261 121,268 116,271 L90,272 C84,270 82,262 86,258 Z" fill="#0b0b0c" />
+      <path d="M100,257 L101,271 M107,257 L109,271 M113,259 L116,270" stroke="#2c2c31" strokeWidth={1} />
+      <path d="M88,259 C93,256 99,256 103,258" fill="none" stroke="#5a5a62" strokeWidth={0.9} />
+      <ellipse cx={84} cy={265} rx={4} ry={8.4} fill="none" stroke="#e8c45c" strokeWidth={2.4} />
+      <ellipse cx={79} cy={265} rx={3.6} ry={8} fill="none" stroke="#b8902f" strokeWidth={1.6} />
+        </>
+      )}
     </svg>
   );
 }
 
-export function Jasper({ polishing = false, portrait = false }: { polishing?: boolean; portrait?: boolean }) {
+export function Jasper({ polishing = false, portrait = false, layer = "all" }: { polishing?: boolean; portrait?: boolean; layer?: Layer }) {
   const id = useIds();
   const url = (n: string) => `url(#${id(n)})`;
   return (
-    <svg viewBox={portrait ? "58 8 84 84" : "0 0 200 250"} className="h-full w-auto" aria-label="Jasper, the dapper bartender">
+    <svg viewBox={portrait ? "58 8 84 84" : VIEWBOX} className="h-full w-auto" aria-label="Jasper, the dapper bartender">
       <defs>
         <radialGradient id={id("face")} cx="0.46" cy="0.4" r="0.66">
           <stop offset="0" stopColor="#ecbf97" />
@@ -297,6 +327,10 @@ export function Jasper({ polishing = false, portrait = false }: { polishing?: bo
           <stop offset="0.5" stopColor="#c98f64" />
           <stop offset="1" stopColor="#9c6643" />
         </linearGradient>
+        <radialGradient id={id("hand")} cx="0.45" cy="0.35" r="0.7">
+          <stop offset="0" stopColor="#e6b38a" />
+          <stop offset="1" stopColor="#b47a52" />
+        </radialGradient>
         <linearGradient id={id("hair")} x1="0" y1="0" x2="1" y2="0.4">
           <stop offset="0" stopColor="#0b0806" />
           <stop offset="0.45" stopColor="#2b211b" />
@@ -329,76 +363,86 @@ export function Jasper({ polishing = false, portrait = false }: { polishing?: bo
         </pattern>
       </defs>
 
-      {/* thick neck, trapezius sloping into broad shoulders */}
-      <path d="M84,86 L116,86 L120,118 L80,118 Z" fill={url("skin")} />
-      <path d="M85,90 C92,100 108,100 115,90 L116,102 C108,108 92,108 84,102 Z" fill="#8f5a3a" opacity={0.4} />
-      <path d="M97,104 Q100,108 103,104" fill="none" stroke="#8f5a3a" strokeWidth={0.9} opacity={0.6} />
+      {layer !== "front" && (
+        <>
+      {/* thick neck: a muscular man's neck is nearly as wide as his jaw */}
+      <path d="M81,84 L119,84 L123,128 L77,128 Z" fill={url("skin")} />
+      <path d="M82,88 C92,100 108,100 118,88 L119,104 C108,111 92,111 81,104 Z" fill="#8f5a3a" opacity={0.42} />
+      <g fill="none" stroke="#8f5a3a" strokeLinecap="round" opacity={0.45}>
+        <path d="M88,100 C92,110 96,118 98,126" strokeWidth={1.4} />
+        <path d="M112,100 C108,110 104,118 102,126" strokeWidth={1.4} />
+      </g>
 
-      {/* shirt: broad chest and shoulders */}
-      <path d="M46,250 C44,200 46,160 54,140 C60,130 68,124 80,120 L100,116 L120,120 C132,124 140,130 146,140 C154,160 156,200 154,250 Z" fill={url("shirt")} />
-      {/* chest under the shirt */}
+      {/* shirt: trapezius slope, shoulders ~2.1 heads across, chest tapering to the waist */}
+      <path d="M100,112 C90,112 84,115 77,118 C62,123 44,128 33,137 C21,147 15,161 15,178 L40,190 L160,190 L185,178 C185,161 179,147 167,137 C156,128 138,123 123,118 C116,115 110,112 100,112 Z" fill={url("shirt")} />
+      <path d="M38,176 C40,210 46,240 50,264 L50,300 L150,300 L150,264 C154,240 160,210 162,176 Z" fill={url("shirt")} />
       <g fill="none" stroke="#cfc5b2" strokeLinecap="round">
-        <path d="M60,150 C66,158 74,162 84,162" strokeWidth={1.4} />
-        <path d="M140,150 C134,158 126,162 116,162" strokeWidth={1.4} />
+        <path d="M46,138 C54,132 64,126 76,121" strokeWidth={1.2} />
+        <path d="M154,138 C146,132 136,126 124,121" strokeWidth={1.2} />
       </g>
 
       {/* vest, pinstriped, with a watch chain */}
-      <path d="M58,250 L58,150 C62,136 72,126 84,120 L100,168 L116,120 C128,126 138,136 142,150 L142,250 Z" fill={url("vest")} />
-      <path d="M58,250 L58,150 C62,136 72,126 84,120 L100,168 L116,120 C128,126 138,136 142,150 L142,250 Z" fill={url("pin")} />
-      <path d="M84,120 L100,168 L116,120" fill="none" stroke="#e8c45c" strokeWidth={1.2} />
-      <path d="M70,150 C82,158 92,164 100,168 C108,164 118,158 130,150" fill="none" stroke="#1a0508" strokeWidth={1} opacity={0.6} />
-      <path d="M68,198 L84,196 M116,196 L132,198" stroke="#e8c45c" strokeWidth={1.4} strokeLinecap="round" />
-      {[178, 192, 206, 220].map((y) => (
+      <path d="M58,140 C68,130 78,124 86,120 L100,198 L100,300 L52,300 C52,262 50,232 49,206 C48,178 50,154 58,140 Z" fill={url("vest")} />
+      <path d="M142,140 C132,130 122,124 114,120 L100,198 L100,300 L148,300 C148,262 150,232 151,206 C152,178 150,154 142,140 Z" fill={url("vest")} />
+      <path d="M52,300 L52,206 C50,178 50,154 58,140 L86,120 L100,198 L114,120 L142,140 C150,154 150,178 148,206 L148,300 Z" fill={url("pin")} />
+      <path d="M86,120 L100,198 L114,120" fill="none" stroke="#e8c45c" strokeWidth={1.3} />
+      <path d="M58,140 C64,170 72,190 100,198 C128,190 136,170 142,140" fill="none" stroke="#1a0508" strokeWidth={1} opacity={0.5} />
+      <path d="M62,232 L80,230 M120,230 L138,232" stroke="#e8c45c" strokeWidth={1.4} strokeLinecap="round" />
+      {[208, 224, 240, 256].map((y) => (
         <g key={y}>
-          <circle cx={100} cy={y} r={2.6} fill="#e8c45c" />
-          <circle cx={99.3} cy={y - 0.7} r={0.9} fill="#fff6cf" />
+          <circle cx={100} cy={y} r={2.8} fill="#e8c45c" />
+          <circle cx={99.2} cy={y - 0.8} r={1} fill="#fff6cf" />
         </g>
       ))}
-      <path d="M100,206 C108,214 118,214 126,204" fill="none" stroke="#e8c45c" strokeWidth={1.1} strokeDasharray="1.6 1.2" />
+      <path d="M100,240 C108,250 120,250 128,236" fill="none" stroke="#e8c45c" strokeWidth={1.2} strokeDasharray="1.8 1.3" />
 
       {/* collar and bow tie */}
-      <path d="M86,114 L100,128 L92,140 L80,122 Z" fill="#fff" stroke="#cfc6b4" strokeWidth={0.9} />
-      <path d="M114,114 L100,128 L108,140 L120,122 Z" fill="#fff" stroke="#cfc6b4" strokeWidth={0.9} />
-      <path d="M100,127 L84,118 C82,124 82,132 84,137 Z" fill="#111" />
-      <path d="M100,127 L116,118 C118,124 118,132 116,137 Z" fill="#111" />
-      <path d="M86,121 L96,126 M86,134 L96,128 M114,121 L104,126 M114,134 L104,128" stroke="#333" strokeWidth={0.8} />
-      <rect x={96} y={123} width={8} height={8} rx={2.4} fill="#1d1d1d" />
+      <path d="M85,114 L100,130 L91,142 L78,122 Z" fill="#fff" stroke="#cfc6b4" strokeWidth={0.9} />
+      <path d="M115,114 L100,130 L109,142 L122,122 Z" fill="#fff" stroke="#cfc6b4" strokeWidth={0.9} />
+      <path d="M100,129 L83,119 C81,126 81,134 83,140 Z" fill="#111" />
+      <path d="M100,129 L117,119 C119,126 119,134 117,140 Z" fill="#111" />
+      <path d="M85,122 L96,128 M85,137 L96,130 M115,122 L104,128 M115,137 L104,130" stroke="#333" strokeWidth={0.8} />
+      <rect x={95.5} y={124.5} width={9} height={9} rx={2.6} fill="#1d1d1d" />
 
-      {/* big shoulders and upper arms in rolled shirtsleeves, gold garters */}
+      {/* upper arms (~1.3 heads, elbows at the waist), shirtsleeves with gold garters */}
       {[0, 1].map((side) => (
         <g key={side} transform={side ? "translate(200 0) scale(-1 1)" : undefined}>
-          <path d="M70,121 C48,121 30,134 26,158 C24,172 24,182 26,192 L54,196 C56,182 58,166 60,152 C62,138 66,128 70,121 Z" fill={url("sleeve")} />
-          <path d="M60,150 C58,166 56,182 54,196" fill="none" stroke="#8e8371" strokeWidth={1.4} />
-          <path d="M34,140 C40,132 50,127 62,125" fill="none" stroke="#fffdf8" strokeWidth={2} opacity={0.7} />
-          <path d="M30,168 C34,160 40,156 46,156" fill="none" stroke="#b5a990" strokeWidth={1} />
-          <path d="M26,158 Q42,150 60,156" fill="none" stroke="#e8c45c" strokeWidth={3.6} strokeLinecap="round" />
-          <path d="M26,158 Q42,150 60,156" fill="none" stroke="#9c7531" strokeWidth={0.8} strokeLinecap="round" />
-          {/* rolled cuff */}
-          <path d="M24,182 C32,177 46,179 56,185 L54,199 C44,192 32,192 25,196 Z" fill="#ece5d8" stroke="#b9ad96" strokeWidth={0.9} />
-          <path d="M25,189 C34,185 45,187 55,192" fill="none" stroke="#b9ad96" strokeWidth={0.8} />
+          <path d="M40,131 C24,133 12,147 12,169 C12,195 16,226 20,252 L49,255 C51,236 55,214 55,196 C55,174 53,150 40,131 Z" fill={url("sleeve")} />
+          <path d="M54,188 C54,212 51,234 49,255" fill="none" stroke="#8e8371" strokeWidth={1.5} />
+          <path d="M20,150 C26,140 34,135 44,133" fill="none" stroke="#fffdf8" strokeWidth={2.2} opacity={0.75} />
+          <path d="M17,198 C22,190 30,186 38,186" fill="none" stroke="#b5a990" strokeWidth={1.1} />
+          <path d="M12,182 Q33,172 55,179" fill="none" stroke="#e8c45c" strokeWidth={4} strokeLinecap="round" />
+          <path d="M12,182 Q33,172 55,179" fill="none" stroke="#9c7531" strokeWidth={0.8} strokeLinecap="round" />
+          {/* rolled cuff just above the elbow */}
+          <path d="M17,228 C27,222 43,224 52,230 L50,246 C40,240 28,240 19,244 Z" fill="#ece5d8" stroke="#b9ad96" strokeWidth={0.9} />
+          <path d="M18,236 C28,232 42,233 51,238" fill="none" stroke="#b9ad96" strokeWidth={0.8} />
         </g>
       ))}
 
-      {/* forearms (sinewy, a few veins), towel, and the coupe he's polishing */}
-      <g style={polishing ? { animation: "polish 1.6s ease-in-out infinite", transformOrigin: "100px 200px", transformBox: "view-box" } : undefined}>
-        {[0, 1].map((side) => (
-          <g key={side} transform={side ? "translate(200 0) scale(-1 1)" : undefined}>
-            <path d="M25,192 C27,210 52,222 88,216 L90,198 C68,198 58,194 54,188 Z" fill={url("arm")} />
-            <path d="M28,196 C34,192 44,192 52,194" fill="none" stroke="#7a4a30" strokeWidth={1.2} opacity={0.5} />
-            <path d="M34,198 C46,206 62,210 82,208" fill="none" stroke="#8f5a3a" strokeWidth={1.2} opacity={0.45} />
-            <path d="M44,196 C52,200 60,201 68,200 M58,200 C64,204 72,205 80,203" fill="none" stroke="#9e6845" strokeWidth={0.8} opacity={0.6} />
-            <path d="M36,192 C44,198 56,200 66,199" fill="none" stroke="#f0c39b" strokeWidth={1.4} opacity={0.6} />
-          </g>
-        ))}
-        {/* coupe */}
-        <path d="M80,174 C80,190 90,197 100,197 C110,197 120,190 120,174 Z" fill="rgba(220,235,255,0.22)" stroke="#f0f6ff" strokeWidth={1.4} />
-        <path d="M84,178 C86,188 92,192 98,193" fill="none" stroke="#fff" strokeWidth={1.4} opacity={0.6} />
-        <line x1={80} y1={174} x2={120} y2={174} stroke="#e8c45c" strokeWidth={1.8} />
-        <line x1={100} y1={197} x2={100} y2={206} stroke="#f0f6ff" strokeWidth={2} />
-        {/* bar towel wrapped over both hands */}
-        <path d="M80,200 C84,194 116,194 120,200 C124,208 118,218 100,218 C82,218 76,208 80,200 Z" fill="#f7f1e3" stroke="#cfc4ab" strokeWidth={1} />
-        <path d="M84,203 C92,207 108,207 116,203 M86,210 C94,213 106,213 114,210" fill="none" stroke="#d8ccb2" strokeWidth={0.9} />
-        <path d="M82,200 L118,200" stroke="#9e2b36" strokeWidth={1.4} opacity={0.7} />
+      {/* forearms come forward from the elbows (foreshortened): left hand on the stem, right hand polishing */}
+      <g style={polishing ? { animation: "polish 1.6s ease-in-out infinite", transformOrigin: "100px 220px", transformBox: "view-box" } : undefined}>
+        <path d="M20,246 C30,232 58,226 82,226 L88,248 C70,252 52,260 38,266 C26,264 18,256 20,246 Z" fill={url("arm")} />
+        <path d="M26,242 C40,234 58,231 78,231" fill="none" stroke="#f0c39b" strokeWidth={1.6} opacity={0.55} />
+        <path d="M34,254 C48,248 62,244 78,242" fill="none" stroke="#8f5a3a" strokeWidth={1.1} opacity={0.5} />
+        <path d="M50,240 C56,238 62,239 68,236" fill="none" stroke="#9e6845" strokeWidth={0.8} opacity={0.6} />
+        <path d="M180,246 C176,230 150,212 132,196 L118,210 C130,226 144,246 156,262 C168,264 180,258 180,246 Z" fill={url("arm")} />
+        <path d="M174,240 C164,226 150,212 136,201" fill="none" stroke="#f0c39b" strokeWidth={1.6} opacity={0.55} />
+        <path d="M162,252 C152,238 140,224 128,212" fill="none" stroke="#8f5a3a" strokeWidth={1.1} opacity={0.5} />
+        {/* coupe: an 11 cm bowl, held by the stem */}
+        <path d="M80,186 C80,202 90,210 100,210 C110,210 120,202 120,186 Z" fill="rgba(220,235,255,0.22)" stroke="#f0f6ff" strokeWidth={1.4} />
+        <ellipse cx={100} cy={186} rx={20} ry={3.4} fill="rgba(255,255,255,0.12)" stroke="#f0f6ff" strokeWidth={1.2} />
+        <path d="M85,190 C87,200 92,205 98,206" fill="none" stroke="#fff" strokeWidth={1.4} opacity={0.6} />
+        <line x1={100} y1={210} x2={100} y2={240} stroke="#f0f6ff" strokeWidth={2.2} />
+        {/* left hand round the stem: fingers wrapped, thumb on top */}
+        <path d="M80,228 C84,222 98,221 106,226 C110,232 110,244 104,249 C97,254 85,253 80,247 C76,241 76,233 80,228 Z" fill={url("hand")} />
+        <path d="M82,234 L106,233 M81,240 L107,240 M83,246 L104,246" stroke="#9e6845" strokeWidth={0.9} opacity={0.75} />
+        <path d="M84,227 C90,222 99,222 104,227" fill="none" stroke="#8f5a3a" strokeWidth={1.1} />
+        {/* right hand under a bar towel, wiping the bowl */}
+        <path d="M106,180 C112,170 130,170 138,180 C143,188 141,202 132,210 L118,214 C110,210 104,192 106,180 Z" fill={url("hand")} />
+        <path d="M104,184 C110,174 126,172 136,180 C140,190 136,202 126,208 C118,208 110,200 108,194 Z" fill="#f7f1e3" stroke="#cfc4ab" strokeWidth={1} />
+        <path d="M110,186 C116,182 126,182 132,186 M112,195 C118,192 126,192 131,195" fill="none" stroke="#d8ccb2" strokeWidth={0.9} />
+        <path d="M128,206 C131,222 128,238 122,248 L134,250 C140,236 140,220 136,204 Z" fill="#f7f1e3" stroke="#cfc4ab" strokeWidth={1} />
+        <path d="M125,240 L136,241" stroke="#9e2b36" strokeWidth={1.6} opacity={0.75} />
       </g>
 
       {/* ears */}
@@ -460,6 +504,8 @@ export function Jasper({ polishing = false, portrait = false }: { polishing?: bo
         <path d="M94,13 C102,10.6 110,11.4 116,15" stroke="#8a7a6d" strokeWidth={1.4} opacity={0.8} />
         <path d="M80,30 C81,24 84,18 87,14" stroke="#4d3e33" strokeWidth={1} />
       </g>
+        </>
+      )}
     </svg>
   );
 }
