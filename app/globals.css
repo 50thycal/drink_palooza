@@ -1,0 +1,288 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   The Gilded Pour — an Art Deco speakeasy.
+   Onyx and mahogany for the room, gold for linework, cream for paper,
+   and neon for anything that should feel electric.
+--------------------------------------------------------------------------- */
+:root {
+  --onyx: #0d0b09;
+  --onyx-2: #17130f;
+  --mahogany: #4a2416;
+  --mahogany-2: #2a130b;
+  --gold: #d4af37;
+  --gold-2: #f3d77a;
+  --gold-deep: #8c6d1f;
+  --champagne: #e9d7a5;
+  --emerald: #0f3d33;
+  --emerald-2: #16584a;
+  --cream: #f4ead5;
+  --cream-2: #e7d8b6;
+  --ink: #2b1d12;
+  --oxblood: #6d1f2a;
+  --neon-pink: #ff4fa3;
+  --neon-teal: #3ff2e0;
+  --neon-amber: #ffb547;
+  --brass: linear-gradient(90deg, #7a5a17, #f3d77a 35%, #c89b2c 55%, #6e4f12);
+  color-scheme: dark;
+}
+
+@theme {
+  --color-onyx: var(--onyx);
+  --color-onyx-2: var(--onyx-2);
+  --color-gold: var(--gold);
+  --color-gold-2: var(--gold-2);
+  --color-gold-deep: var(--gold-deep);
+  --color-champagne: var(--champagne);
+  --color-emerald: var(--emerald);
+  --color-emerald-2: var(--emerald-2);
+  --color-cream: var(--cream);
+  --color-cream-2: var(--cream-2);
+  --color-ink: var(--ink);
+  --color-oxblood: var(--oxblood);
+  --color-neon-pink: var(--neon-pink);
+  --color-neon-teal: var(--neon-teal);
+  --color-neon-amber: var(--neon-amber);
+  --font-display: "Limelight", "Didot", serif;
+  --font-deco: "Poiret One", "Josefin Sans", sans-serif;
+  --font-body: "Josefin Sans", system-ui, sans-serif;
+  --font-neon: "Neonderthaw", "Brush Script MT", cursive;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--onyx);
+  color: var(--champagne);
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* The camera owns the viewport: scenes scroll inside themselves. */
+body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+}
+input,
+textarea {
+  font-family: var(--font-body);
+}
+
+/* ---- Surfaces ----------------------------------------------------------- */
+
+/* Mahogany bar top, seen from above: long planks with grain. */
+.wood {
+  background-color: var(--mahogany);
+  background-image:
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.35) 0 2px, transparent 2px 25%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(180deg, transparent 0 37px, rgb(0 0 0 / 0.06) 37px 39px, transparent 39px 91px),
+    radial-gradient(120% 60% at 30% 20%, rgb(255 170 110 / 0.12), transparent 60%),
+    linear-gradient(180deg, #5a2c1a, var(--mahogany) 40%, var(--mahogany-2));
+}
+
+/* The back wall: deep emerald lacquer with gold pinstripes. */
+.wall {
+  background-color: #0a1512;
+  background-image:
+    radial-gradient(70% 45% at 50% 0%, rgb(255 79 163 / 0.14), transparent 70%),
+    radial-gradient(60% 40% at 50% 100%, rgb(63 242 224 / 0.08), transparent 70%),
+    repeating-linear-gradient(90deg, rgb(212 175 55 / 0.07) 0 1px, transparent 1px 44px),
+    linear-gradient(180deg, #0b1a16, #071210 60%, #050b09);
+}
+
+.paper {
+  background-color: var(--cream);
+  background-image:
+    radial-gradient(120% 80% at 50% 0%, rgb(255 255 255 / 0.5), transparent 70%),
+    repeating-linear-gradient(0deg, rgb(43 29 18 / 0.025) 0 1px, transparent 1px 3px);
+  color: var(--ink);
+}
+
+.brass {
+  background: var(--brass);
+}
+
+/* Double-rule gold frame with stepped corners. */
+.deco-frame {
+  position: relative;
+  border: 1.5px solid var(--gold);
+  box-shadow:
+    inset 0 0 0 4px transparent,
+    inset 0 0 0 5px rgb(212 175 55 / 0.55);
+}
+.deco-frame-ink {
+  border: 1.5px solid var(--ink);
+  box-shadow: inset 0 0 0 4px transparent, inset 0 0 0 5px rgb(43 29 18 / 0.45);
+}
+
+.gold-text {
+  background: linear-gradient(180deg, #fff1bf, var(--gold-2) 40%, var(--gold) 60%, var(--gold-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Neon --------------------------------------------------------------- */
+
+.neon {
+  --glow: var(--neon-pink);
+  color: #fff;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 6px var(--glow),
+    0 0 14px var(--glow),
+    0 0 28px var(--glow),
+    0 0 48px var(--glow);
+}
+.neon-off {
+  color: rgb(255 255 255 / 0.12);
+  text-shadow: none;
+}
+.neon-tube {
+  --glow: var(--neon-teal);
+  border: 2px solid #fff;
+  box-shadow:
+    0 0 4px #fff,
+    0 0 10px var(--glow),
+    0 0 22px var(--glow),
+    inset 0 0 10px var(--glow);
+}
+@keyframes flicker-on {
+  0% { opacity: 0.05; }
+  8% { opacity: 1; }
+  12% { opacity: 0.15; }
+  20% { opacity: 1; }
+  24% { opacity: 0.3; }
+  34% { opacity: 1; }
+  100% { opacity: 1; }
+}
+@keyframes buzz {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.6; }
+  94% { opacity: 1; }
+  97% { opacity: 0.85; }
+}
+.flicker-on {
+  animation: flicker-on 1.4s steps(1, end) both, buzz 6s 1.4s infinite;
+}
+
+/* ---- Menu card ---------------------------------------------------------- */
+
+.menu-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+}
+.menu-item .leader {
+  flex: 1;
+  border-bottom: 2px dotted rgb(43 29 18 / 0.35);
+  transform: translateY(-0.3em);
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+
+.btn-gold {
+  background: linear-gradient(180deg, #f6e08f, var(--gold) 55%, #a8831f);
+  color: #1d1406;
+  border: 1px solid #fff3c4;
+  box-shadow: 0 2px 0 #6e5212, 0 8px 22px rgb(212 175 55 / 0.25);
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+}
+.btn-gold:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #6e5212;
+}
+.btn-ghost {
+  border: 1px solid rgb(212 175 55 / 0.55);
+  color: var(--champagne);
+  font-family: var(--font-deco);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Effects ------------------------------------------------------------ */
+
+@keyframes float-up {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  10% { opacity: 1; transform: translate(0, -20px) scale(1.15); }
+  100% { transform: translate(var(--drift, 0px), -70vh) scale(0.9); opacity: 0; }
+}
+.float-up {
+  animation: float-up 3.2s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+}
+
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0); }
+  100% { transform: translate3d(var(--drift, 0px), 110vh, 0) rotate(var(--spin, 720deg)); }
+}
+
+@keyframes rise {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translateY(calc(-1 * var(--h, 120px))); opacity: 0; }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(-80px); }
+}
+
+@keyframes shake-it {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-9deg) translateY(-2px); }
+  75% { transform: rotate(7deg) translateY(2px); }
+}
+@keyframes polish {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-5deg) translateX(-2px); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
