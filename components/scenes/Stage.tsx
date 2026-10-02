@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SOUNDS } from "@/lib/constants";
 import { eventAction, send } from "@/lib/api";
-import { playSound } from "@/lib/sounds";
+import { playSound, preloadSounds } from "@/lib/sounds";
 import { useApp } from "../AppContext";
 import { PhotoButton, PrepSheet } from "../Drink";
 import { Avatar, BackPlaque, DecoDivider, FloatingReactions, Neon, Sunburst, toast, useBusy } from "../ui";
@@ -21,6 +21,8 @@ export function StageScene() {
   const [prep, setPrep] = useState(false);
   const [recipe, setRecipe] = useState(false);
   const { busy, run } = useBusy();
+  // Fetch any recorded soundboard samples before the first tap.
+  useEffect(preloadSounds, []);
   const drink = live?.current;
   if (!live || !drink) {
     return (
@@ -105,22 +107,19 @@ export function StageScene() {
         <div className="relative mt-6 px-4">
           <DecoDivider className="mx-6 mb-4" />
           <div className="mb-2 text-center font-deco text-xs font-bold tracking-[0.4em] text-champagne/70">THE SOUNDBOARD</div>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="mx-auto grid max-w-xs grid-cols-3 gap-x-5 gap-y-3">
             {SOUNDS.map((s) => (
-              <motion.button
-                key={s.key}
-                whileTap={{ scale: 0.88 }}
-                onClick={() => sound(s.key, s.emoji)}
-                className="flex aspect-square flex-col items-center justify-center rounded-full border-2 border-gold bg-[radial-gradient(circle_at_35%_30%,#3a2a10,#0d0b09_70%)] shadow-[0_4px_0_#5c4510,0_0_18px_rgba(212,175,55,0.2)]"
-                aria-label={s.label}
-              >
-                <span className="text-2xl leading-none">{s.emoji}</span>
-              </motion.button>
-            ))}
-          </div>
-          <div className="mt-1 grid grid-cols-5 gap-2 text-center font-deco text-[10px] font-bold leading-tight tracking-wide text-champagne/70">
-            {SOUNDS.map((s) => (
-              <span key={s.key}>{s.label}</span>
+              <div key={s.key} className="flex flex-col items-center gap-1">
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => sound(s.key, s.emoji)}
+                  className="flex aspect-square w-full items-center justify-center rounded-full border-2 border-gold bg-[radial-gradient(circle_at_35%_30%,#3a2a10,#0d0b09_70%)] shadow-[0_4px_0_#5c4510,0_0_18px_rgba(212,175,55,0.2)]"
+                  aria-label={s.label}
+                >
+                  <span className="text-3xl leading-none">{s.emoji}</span>
+                </motion.button>
+                <span className="text-center font-deco text-[11px] font-bold leading-tight tracking-wide text-champagne/75">{s.label}</span>
+              </div>
             ))}
           </div>
 
