@@ -159,8 +159,37 @@ sections are **Art Deco coasters**:
 Tapping a coaster drives the camera there.
 
 **The Bartenders.** Two illustrated Art Deco bartenders behind the bar:
-- **Mabel**, a flapper: finger-wave bob, beaded headband with a feather, pearls.
-- **Jasper**, a dapper gentleman: slicked hair, bow tie, vest, sleeve garters.
+- **Mabel**, a blonde flapper: platinum-gold finger-wave bob, rhinestone headband with an ostrich plume, sea-green eyes, cupid's-bow lips, beaded emerald drop-waist dress with fringe, pearls, black satin opera gloves, cobbler shaker.
+- **Jasper**, an Italian gentleman bartender: olive skin, slicked-back black hair with a sharp side part, square jaw with a hint of five o'clock shadow, a tight clean-cut pencil moustache, broad shoulders and big forearms in rolled shirtsleeves with gold garters, pinstriped vest, bow tie, watch chain.
+
+Painted-poster style: gradients for skin, hair and fabric rather than flat fills. `portrait` crops the same drawing to the head for the in-game cameo.
+
+**Drawn to real proportions.** Built on classic figure-drawing landmarks (Loomis):
+- shoulders about 2 heads wide for her and about 2⅓ for him
+- upper arm about 1.5 heads, forearm about 1, hand about ¾ of a head
+- elbows hanging at the waist
+- the shaker and the coupe sized to the real things (~30 cm tin, ~11 cm bowl)
+
+**Behind the bar, not floating.** Both drawings share one frame (`VIEW_W`, `VIEW_H`) with the bar top at waist height (`BAR_Y`). The scene stacks them in three slices:
+1. their bodies
+2. the counter: polished top, brass edge, panelled front, its top edge at their waists
+3. anything resting *on* the bar (Mabel's gloved forearm and hand), drawn again over the counter
+
+The top of the stage is kept clear for the speech bubble, so it never covers a face.
+
+**The back bar is to scale too.** The wall behind them is drawn in the same units as the bartenders, set one step back (85%), so a 750 ml bottle is about 30 cm next to a 23 cm head. It has:
+- mirrored Deco arches
+- three lit glass shelves with brass rails
+- a seeded jumble of real bottle shapes: fifths, litres, square whiskey, tall cordials, squat flasks, half bottles, little bitters, a cut-glass decanter
+- glass colours (amber, clear, cobalt, ruby, green, milk glass) with different spirits inside at different fill levels
+- assorted labels and caps (foil, cork, dripping wax)
+- the odd champagne-coupe tower
+
+Every bottle rolls its own dice from a fixed seed, so it's the same bar on every phone and every render.
+
+**They talk.** `lib/banter.ts` writes their lines from the live state:
+- *At the bar* they hold a running conversation: the line you need first (join up, write your recipe, snap a photo), then back-and-forths that call people out by name ("Still no recipe from Zoe." / "Zoe, it's a cocktail, not a novel."), headcount jokes, champion ribbing, and a stock of we're-going-to-drink-too-much gags. Tap the bubble to move them on.
+- *During the game* one of them leans into frame with a short remark: a new presenter ("Mezcal? Bold choice, Cal."), your own pour once it settles (a 1 or a 10 always gets one), someone finishing, the last straggler by name, every glass in, a flurry of reactions, a napkin, or idle chatter if it goes quiet. At most one every 9 seconds, so they season the game rather than narrate it.
 
 Each visit, one of them speaks ("What'll it be, Cal?"). The choices are a
 cocktail-menu card, not a row of buttons: join tonight's palooza, shake up the
