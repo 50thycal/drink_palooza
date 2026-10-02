@@ -79,6 +79,10 @@ export const SCHEMA_STATEMENTS: string[] = [
      created_at  timestamptz NOT NULL DEFAULT now()
    )`,
   `CREATE INDEX IF NOT EXISTS photos_drink_idx ON photos (drink_id)`,
+  // Where the original lives in Vercel Blob. Private blobs are streamed through
+  // /api/photos/:id, so `url` is what the app shows and these are what it reads.
+  `ALTER TABLE photos ADD COLUMN IF NOT EXISTS blob_url text`,
+  `ALTER TABLE photos ADD COLUMN IF NOT EXISTS blob_access text CHECK (blob_access IS NULL OR blob_access IN ('public','private'))`,
   // Used only when no Vercel Blob store is attached (local dev, or a deploy
   // before Blob is set up). Photos are resized on the phone first, so rows are small.
   `CREATE TABLE IF NOT EXISTS photo_data (

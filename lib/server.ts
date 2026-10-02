@@ -273,15 +273,18 @@ export async function addPhoto(
   drinkId: string,
   me: string,
   file: { bytes: Uint8Array; mime: string; width: number | null; height: number | null },
-  store: (photoId: string, drinkId: string, bytes: Uint8Array, mime: string) => Promise<string | null>,
+  store: (photoId: string, drinkId: string, bytes: Uint8Array, mime: string) => Promise<{ url: string; access: "public" | "private" } | null>,
 ): Promise<Photo> {
   await requireMember(sql, me);
   const drink = await getDrink(sql, drinkId);
   const id = crypto.randomUUID();
-  const blobUrl = await store(id, drinkId, file.bytes, file.mime);
-  const rows = await sql`INSERT INTO photos (id, drink_id, uploader_id, url, width, height)
-    VALUES (${id}, ${drinkId}, ${me}, ${blobUrl ?? `/api/photos/${id}`}, ${file.width}, ${file.height}) RETURNING *`;
-  if (!blobUrl) {
+  const blob = await store(id, drinkId, file.bytes, file.mime);
+  // Public blobs are served straight from the CDN; private blobs and Postgres
+  // fallbacks go through /api/photos/:id.
+  const url = blob?.access === "public" ? blob.url : `/api/photos/${id}`;
+  const rows = await sql`INSERT INTO photos (id, drink_id, uploader_id, url, width, height, blob_url, blob_access)
+    VALUES (${id}, ${drinkId}, ${me}, ${url}, ${file.width}, ${file.height}, ${blob?.url ?? null}, ${blob?.access ?? null}) RETURNING *`;
+  if (!blob) {
     await sql`INSERT INTO photo_data (photo_id, mime, data) VALUES (${id}, ${file.mime}, decode(${Buffer.from(file.bytes).toString("hex")}, 'hex'))`;
   }
   // The maker's first photo becomes the hero shot automatically.
@@ -289,14 +292,20 @@ export async function addPhoto(
   return rows[0] as Photo;
 }
 
-export async function photoData(sql: Sql, id: string): Promise<{ mime: string; bytes: Buffer } | null> {
-  const rows = await sql`SELECT mime, encode(data, 'base64') AS b64 FROM photo_data WHERE photo_id = ${id}`;
-  if (!rows.length) return null;
-  return { mime: rows[0].mime, bytes: Buffer.from(rows[0].b64, "base64") };
+/** Where a photo's bytes live: in Postgres, or in a private blob to stream. */
+export async function photoSource(
+  sql: Sql,
+  id: string,
+): Promise<{ kind: "bytes"; mime: string; bytes: Buffer } | { kind: "blob"; url: string; access: "public" | "private" } | null> {
+  const data = await sql`SELECT mime, encode(data, 'base64') AS b64 FROM photo_data WHERE photo_id = ${id}`;
+  if (data.length) return { kind: "bytes", mime: data[0].mime, bytes: Buffer.from(data[0].b64, "base64") };
+  const rows = await sql`SELECT blob_url, blob_access FROM photos WHERE id = ${id}`;
+  if (rows[0]?.blob_url) return { kind: "blob", url: rows[0].blob_url, access: rows[0].blob_access };
+  return null;
 }
 
-export async function deletePhoto(sql: Sql, photoId: string, me: string): Promise<Photo> {
-  const rows = (await sql`SELECT p.*, d.member_id AS owner FROM photos p JOIN drinks d ON d.id = p.drink_id WHERE p.id = ${photoId}`) as (Photo & { owner: string })[];
+export async function deletePhoto(sql: Sql, photoId: string, me: string): Promise<Photo & { blob_url: string | null }> {
+  const rows = (await sql`SELECT p.*, d.member_id AS owner FROM photos p JOIN drinks d ON d.id = p.drink_id WHERE p.id = ${photoId}`) as (Photo & { owner: string; blob_url: string | null })[];
   if (!rows.length) throw new NotFound("No such photo");
   const photo = rows[0];
   if (photo.uploader_id !== me && photo.owner !== me) throw new Forbidden("Only whoever took it, or the drink's bartender, can remove a photo");
