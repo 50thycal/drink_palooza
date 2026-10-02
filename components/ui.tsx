@@ -184,7 +184,7 @@ export function Sheet({
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  tone?: "paper" | "slate";
+  tone?: "paper" | "slate" | "wood";
 }) {
   const { height, keyboard } = useViewportInsets();
   const maxH = height ? height - 24 : undefined;
@@ -197,7 +197,7 @@ export function Sheet({
             <motion.div
               role="dialog"
               aria-label={title}
-              className={`${tone === "slate" ? "slate border-t-[6px] border-[#6b4a2b]" : "paper"} absolute inset-x-0 mx-auto flex max-w-lg flex-col rounded-t-2xl shadow-2xl`}
+              className={`${tone === "slate" ? "slate border-t-[6px] border-[#6b4a2b]" : tone === "wood" ? "wood border-t-2 border-gold/50 text-champagne" : "paper"} absolute inset-x-0 mx-auto flex max-w-lg flex-col rounded-t-2xl shadow-2xl`}
               style={{ bottom: keyboard, maxHeight: maxH ?? "88dvh" }}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
@@ -206,7 +206,7 @@ export function Sheet({
             >
               {tone === "paper" && <div className="deco-frame-ink pointer-events-none absolute inset-2 rounded-t-xl" />}
               <div className="flex items-center justify-between px-5 pt-5 pb-2">
-                <h2 className={tone === "slate" ? "chalk text-3xl font-bold" : "font-display text-xl tracking-wide"}>{title}</h2>
+                <h2 className={tone === "slate" ? "chalk text-3xl font-bold" : tone === "wood" ? "gold-text font-display text-2xl tracking-wide" : "font-display text-xl tracking-wide"}>{title}</h2>
                 <button onClick={onClose} className="relative z-10 rounded-full px-3 py-1 font-deco text-sm font-bold" aria-label="Close">
                   ✕
                 </button>

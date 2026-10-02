@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+
+// Self-hosted (all SIL Open Font License): no request to Google, preloaded
+// with the page, and size-matched fallbacks so text doesn't jump on load.
+const display = localFont({ src: "./fonts/limelight.woff2", variable: "--ff-display", display: "swap" });
+const deco = localFont({ src: "./fonts/poiret-one.woff2", variable: "--ff-deco", display: "swap" });
+const body = localFont({ src: "./fonts/josefin-sans.woff2", variable: "--ff-body", weight: "100 700", display: "swap" });
+const neon = localFont({ src: "./fonts/neonderthaw.woff2", variable: "--ff-neon", display: "swap" });
+const chalk = localFont({ src: "./fonts/caveat.woff2", variable: "--ff-chalk", weight: "400 700", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Drink Palooza",
@@ -19,16 +28,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Josefin+Sans:wght@400;600;700&family=Limelight&family=Neonderthaw&family=Poiret+One&display=swap"
-        />
-      </head>
+    <html lang="en" className={`${display.variable} ${deco.variable} ${body.variable} ${neon.variable} ${chalk.variable}`}>
       <body>{children}</body>
     </html>
   );

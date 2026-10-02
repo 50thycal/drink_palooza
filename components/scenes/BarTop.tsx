@@ -188,10 +188,10 @@ function ChampionCap({ initials, date, color, style }: { initials: string; date:
         fill="#d4af37"
       />
       <circle cx="24" cy="24" r="16" fill={color} stroke="#fff3c4" strokeWidth="1.2" />
-      <text x="24" y="25" textAnchor="middle" fontSize="12" fill="#fff8e0" fontFamily="Limelight, serif">
+      <text x="24" y="25" textAnchor="middle" fontSize="12" fill="#fff8e0" style={{ fontFamily: "var(--font-display)" }}>
         {initials}
       </text>
-      <text x="24" y="34" textAnchor="middle" fontSize="6" fill="#fff8e0" fontFamily="Josefin Sans, sans-serif" fontWeight="700">
+      <text x="24" y="34" textAnchor="middle" fontSize="6" fill="#fff8e0" style={{ fontFamily: "var(--font-body)" }} fontWeight="700">
         🏆 {date}
       </text>
     </svg>
@@ -235,7 +235,7 @@ function BottleCap({ className = "", rotate = 0 }: { className?: string; rotate?
         fill="#c8a24a"
       />
       <circle cx="20" cy="20" r="13" fill="#6d1f2a" stroke="#f3d77a" strokeWidth="1" />
-      <text x="20" y="24" textAnchor="middle" fontSize="10" fill="#f3d77a" fontFamily="Limelight, serif">
+      <text x="20" y="24" textAnchor="middle" fontSize="10" fill="#f3d77a" style={{ fontFamily: "var(--font-display)" }}>
         DP
       </text>
     </svg>

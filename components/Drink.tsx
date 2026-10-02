@@ -7,6 +7,18 @@ import type { Drink, Ingredient, Photo } from "@/lib/types";
 import { useApp } from "./AppContext";
 import { DecoDivider, Sheet, Spinner, toast, useBusy } from "./ui";
 
+/** Shrink a photo on the phone and attach it to a drink. */
+export async function uploadDrinkPhoto(drinkId: string, file: File) {
+  const { blob, width, height } = await resizePhoto(file);
+  const form = new FormData();
+  form.append("photo", blob, "drink.jpg");
+  form.append("width", String(width));
+  form.append("height", String(height));
+  await send("POST", `/api/drinks/${drinkId}/photos`, form);
+  await refreshAll();
+  toast("📸 Photo added");
+}
+
 /** Take or pick a photo, shrink it on the phone, upload it. */
 export function PhotoButton({ drinkId, label = "Snap a photo", className = "", dark = false }: { drinkId: string; label?: string; className?: string; dark?: boolean }) {
   const camera = useRef<HTMLInputElement>(null);
@@ -17,14 +29,7 @@ export function PhotoButton({ drinkId, label = "Snap a photo", className = "", d
     if (!file) return;
     setBusy(true);
     try {
-      const { blob, width, height } = await resizePhoto(file);
-      const form = new FormData();
-      form.append("photo", blob, "drink.jpg");
-      form.append("width", String(width));
-      form.append("height", String(height));
-      await send("POST", `/api/drinks/${drinkId}/photos`, form);
-      await refreshAll();
-      toast("📸 Photo added");
+      await uploadDrinkPhoto(drinkId, file);
     } catch (err) {
       toast((err as Error).message);
     } finally {
